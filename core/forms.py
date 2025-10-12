@@ -1,5 +1,4 @@
 import json
-
 from django import forms
 from django.db.models import Q
 
@@ -11,6 +10,7 @@ from .models import (
     OrganizationRole,
     OrganizationType,
     RoleAssignment,
+    StudentAchievement,
 )
 
 
@@ -29,7 +29,6 @@ class RoleAssignmentForm(forms.ModelForm):
         self.fields["organization"].queryset = Organization.objects.filter(
             org_filter
         ).order_by("name")
-        # Replace Django's default blank label ("---------") with a clearer prompt
         self.fields["organization"].empty_label = "Select Organization"
 
         # Include active roles plus the currently assigned role (even if inactive)
@@ -41,11 +40,9 @@ class RoleAssignmentForm(forms.ModelForm):
             .select_related("organization")
             .order_by("name")
         )
-        # Remove the implicit blank option from the role dropdown
         self.fields["role"].empty_label = "Select Role"
-        # Make fields not required at the form level so that forms marked
-        # for deletion do not fail per-field validation. The formset's
-        # clean() will enforce requiredness for non-deleted forms.
+
+        # Mark fields as not required for deletion-safe formsets
         self.fields["organization"].required = False
         self.fields["role"].required = False
 
@@ -78,7 +75,7 @@ class RegistrationForm(forms.Form):
             role_id = item.get("role")
             if not org_id or not role_id:
                 continue
-            # Ensure the IDs exist
+            # Ensure IDs exist
             if not Organization.objects.filter(id=org_id).exists():
                 continue
             if not OrganizationRole.objects.filter(id=role_id).exists():
@@ -228,3 +225,35 @@ class CDLMessageForm(forms.ModelForm):
     class Meta:
         model = CDLMessage
         fields = ["body", "file", "sent_via_email"]
+
+
+class StudentAchievementForm(forms.ModelForm):
+    """Validate student achievement submissions including optional document upload."""
+
+    MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5 MB
+    ALLOWED_CONTENT_TYPES = {
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+    }
+
+    class Meta:
+        model = StudentAchievement
+        fields = ["title", "description", "date_achieved", "document"]
+
+    def clean_document(self):
+        document = self.cleaned_data.get("document")
+        if not document:
+            return document
+
+        if document.size > self.MAX_UPLOAD_SIZE:
+            raise forms.ValidationError("Document must be 5 MB or smaller.")
+
+        content_type = getattr(document, "content_type", "").lower()
+        if content_type and content_type not in self.ALLOWED_CONTENT_TYPES:
+            raise forms.ValidationError(
+                "Unsupported file type. Upload a PDF or image file."
+            )
+
+        return document

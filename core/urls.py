@@ -157,6 +157,42 @@ urlpatterns = [
     path("api/organizations/", views.api_organizations, name="api_organizations"),
     path("api/roles/", views.api_roles, name="api_roles"),
     path("api/auth/me", views.api_auth_me, name="frontend_api_auth_me"),
+    path("api/student/achievements/", views.api_student_achievements, name="api_student_achievements"),
+    path(
+        "api/student/achievements/<int:achievement_id>/",
+        views.api_student_achievement_detail,
+        name="api_student_achievement_detail",
+    ),
+    path(
+        "api/student/update-personal-info/",
+        views.api_update_student_personal,
+        name="api_update_student_personal",
+    ),
+    path(
+        "api/student/update-academic-info/",
+        views.api_update_student_academic,
+        name="api_update_student_academic",
+    ),
+    path(
+        "api/student/organization-types/",
+        views.api_student_organization_types,
+        name="api_student_organization_types",
+    ),
+    path(
+        "api/student/organizations/",
+        views.api_student_organizations,
+        name="api_student_organizations",
+    ),
+    path(
+        "api/student/join-organization/",
+        views.api_student_join_organization,
+        name="api_student_join_organization",
+    ),
+    path(
+        "api/student/leave-organization/<int:org_id>/",
+        views.api_student_leave_organization,
+        name="api_student_leave_organization",
+    ),
     # --- Dashboard data APIs (used by dashboards JS) ---
     path("api/student/performance-data/", views.api_student_performance_data, name="api_student_performance_data"),
     path("api/user/events-data/", views.api_user_events_data, name="api_user_events_data"),

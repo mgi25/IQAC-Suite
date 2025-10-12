@@ -1,8 +1,13 @@
+import os
+
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.validators import FileExtensionValidator
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, F
+from django.db.models.functions import Lower
 from django.utils import timezone
+from django.utils.text import slugify
 
 # Predefined Sustainable Development Goals
 SDG_GOALS = [
@@ -136,6 +141,20 @@ class OrganizationRole(ArchivableModel):
     class Meta:
         unique_together = ("organization", "name")
         ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                Lower("name"),
+                "organization",
+                name="core_orgrole_name_ci_unique",
+            )
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.name:
+            normalized = self.name.strip()
+            if normalized:
+                self.name = normalized[0].upper() + normalized[1:]
+        super().save(*args, **kwargs)
 
     def __str__(self):
         # N+1 RISK: Accessing self.organization.name can cause extra queries.
@@ -253,6 +272,34 @@ class Profile(models.Model):
         # N+1 RISK: Accessing self.user can cause an extra query.
         # Use select_related('user') when querying Profiles.
         return f"{self.user.username} ({self.role})"
+
+
+def student_achievement_document_path(instance, filename):
+    base, ext = os.path.splitext(filename)
+    safe_base = slugify(base) or "document"
+    timestamp = timezone.now().strftime("%Y%m%d%H%M%S")
+    return f"achievements/user_{instance.user_id}/{timestamp}_{safe_base}{ext.lower()}"
+
+
+class StudentAchievement(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="student_achievements")
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    date_achieved = models.DateField(null=True, blank=True)
+    document = models.FileField(
+        upload_to=student_achievement_document_path,
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(["pdf", "png", "jpg", "jpeg", "webp"])]
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = [F("date_achieved").desc(nulls_last=True), "-created_at"]
+
+    def __str__(self):
+        return f"{self.title} ({self.user.username})"
 
 
 # ───────────────────────────────

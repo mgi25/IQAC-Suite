@@ -11,54 +11,40 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeAvatarUpload();
     initializeFormHandlers();
     initializeQuickActions();
+    initializeAchievementsModule();
+
+    if (window.ProfileOrganizations && typeof window.ProfileOrganizations.initialize === 'function') {
+        window.ProfileOrganizations.initialize({
+            role: 'student',
+            joinRequestsScriptId: 'join-requests-data',
+            organizationListSelector: '#organization-list',
+            organizationListContainerSelector: '#organizations .organization-panel .card-body',
+            organizationEmptySelector: '#organizations .empty-state-condensed',
+            joinRequestsListSelector: '#join-requests-list',
+            joinRequestsEmptySelector: '#join-requests-empty',
+            onMembershipChange: () => {
+                loadParticipationStats();
+            }
+        });
+    }
 });
+
+let activeModal = null;
+let previouslyFocusedElement = null;
+let modalEscapeListener = null;
+let modalFocusTrapListener = null;
+let achievementsCache = [];
+let achievementsInitialized = false;
+let achievementBeingEdited = null;
+let achievementPendingDeletion = null;
 
 // Student Profile Initialization
 function initializeStudentProfile() {
-    // Auto-focus on completion improvement suggestions
-    checkProfileCompletion();
-    
     // Initialize academic info display
     updateAcademicStatus();
     
     // Load participation stats
     loadParticipationStats();
-}
-
-// Check Profile Completion and Show Suggestions
-function checkProfileCompletion() {
-    const completionPercentage = parseInt(document.querySelector('.completion-percentage').textContent);
-    
-    if (completionPercentage < 80) {
-        showCompletionSuggestions(completionPercentage);
-    }
-}
-
-function showCompletionSuggestions(percentage) {
-    const suggestions = [];
-    
-    // Check what's missing based on DOM content
-    const regNumber = document.querySelector('[data-field="registration_number"]')?.textContent;
-    const department = document.querySelector('[data-field="department"]')?.textContent;
-    const academicYear = document.querySelector('[data-field="academic_year"]')?.textContent;
-    
-    if (!regNumber || regNumber === 'Not Set') {
-        suggestions.push('Add your registration number');
-    }
-    if (!department || department === 'Not Assigned') {
-        suggestions.push('Update your department information');
-    }
-    if (!academicYear || academicYear === 'Not Set') {
-        suggestions.push('Set your academic year');
-    }
-    
-    if (suggestions.length > 0) {
-        showNotification(
-            `Profile ${percentage}% complete. Consider: ${suggestions.join(', ')}`,
-            'info',
-            8000
-        );
-    }
 }
 
 // Academic Status Updates
@@ -92,7 +78,7 @@ async function loadParticipationStats() {
 function updateParticipationDisplay(data) {
     // Update stats in the header
     const statsCards = document.querySelectorAll('.stat-card');
-    
+
     statsCards.forEach(card => {
         const label = card.querySelector('.stat-label').textContent;
         const numberElement = card.querySelector('.stat-number');
@@ -117,28 +103,111 @@ function updateParticipationDisplay(data) {
     });
 }
 
+function applyPersonalInfoUpdate(payload) {
+    if (!payload || typeof payload !== 'object') {
+        return;
+    }
+
+    const fullName = payload.full_name || `${payload.first_name || ''} ${payload.last_name || ''}`.trim();
+    const usernameFallback = payload.username || document.querySelector('.profile-title')?.dataset.username || '';
+    const resolvedName = fullName || usernameFallback || 'Not Set';
+    const email = payload.email || '';
+    const registration = payload.registration_number || '';
+
+    const fullNameEl = document.querySelector('[data-field="full_name"]');
+    if (fullNameEl) {
+        fullNameEl.textContent = resolvedName;
+        fullNameEl.dataset.firstName = payload.first_name || '';
+        fullNameEl.dataset.lastName = payload.last_name || '';
+        fullNameEl.dataset.username = usernameFallback;
+    }
+
+    const profileTitleEl = document.querySelector('.profile-title');
+    if (profileTitleEl) {
+        profileTitleEl.textContent = resolvedName;
+    }
+
+    const emailEl = document.querySelector('[data-field="email"]');
+    if (emailEl) {
+        const displayEmail = email || 'Not Set';
+        emailEl.textContent = displayEmail;
+        emailEl.dataset.value = email;
+    }
+
+    const profileSubtitleEl = document.querySelector('.profile-subtitle');
+    if (profileSubtitleEl) {
+        profileSubtitleEl.textContent = email || 'Not Set';
+        profileSubtitleEl.dataset.profileEmail = email;
+    }
+
+    const registrationEl = document.querySelector('[data-field="registration_number"]');
+    if (registrationEl) {
+        registrationEl.textContent = registration || 'Not Set';
+        registrationEl.dataset.value = registration;
+    }
+
+    const headerRegistrationEl = document.querySelector('.profile-reg-number');
+    if (headerRegistrationEl) {
+        const textSpan = headerRegistrationEl.querySelector('.registration-number-text');
+        headerRegistrationEl.dataset.registrationNumber = registration;
+        if (registration) {
+            headerRegistrationEl.removeAttribute('hidden');
+            if (textSpan) {
+                textSpan.textContent = registration;
+            }
+        } else {
+            headerRegistrationEl.setAttribute('hidden', 'hidden');
+            if (textSpan) {
+                textSpan.textContent = 'Not Set';
+            }
+        }
+    }
+}
+
+
 // Form Handlers for Student-Specific Actions
 function initializeFormHandlers() {
     // Personal info edit handler
     window.editPersonalInfo = function() {
+        const fullNameEl = document.querySelector('[data-field="full_name"]');
+        const emailEl = document.querySelector('[data-field="email"]');
+        const registrationEl = document.querySelector('[data-field="registration_number"]');
+
+        const firstName = fullNameEl?.dataset.firstName || '';
+        const lastName = fullNameEl?.dataset.lastName || '';
+        const email = emailEl?.dataset.value || emailEl?.textContent.trim() || '';
+        const registration = registrationEl?.getAttribute('data-value') || '';
+
         showEditModal('personal-info', {
             title: 'Edit Personal Information',
+            description: 'Update your name and registration number so your profile stays current.',
             fields: [
-                { name: 'first_name', label: 'First Name', type: 'text', required: true },
-                { name: 'last_name', label: 'Last Name', type: 'text', required: true },
-                { name: 'email', label: 'Email', type: 'email', required: true, readonly: true }
+                { name: 'first_name', label: 'First Name', type: 'text', required: true, value: firstName },
+                { name: 'last_name', label: 'Last Name', type: 'text', required: true, value: lastName },
+                { name: 'email', label: 'Email', type: 'email', required: true, readonly: true, value: email },
+                { name: 'registration_number', label: 'Registration Number', type: 'text', required: false, value: registration }
             ]
         });
     };
 
     // Academic info edit handler
     window.editAcademicInfo = function() {
+        const getFieldValue = name => {
+            const el = document.querySelector(`[data-field="${name}"]`);
+            if (!el) {
+                return '';
+            }
+            return (el.getAttribute('data-value') || el.textContent || '').trim();
+        };
+
         showEditModal('academic-info', {
             title: 'Edit Academic Information',
             fields: [
-                { name: 'registration_number', label: 'Registration Number', type: 'text', required: true },
-                { name: 'department', label: 'Department', type: 'select', required: true },
-                { name: 'academic_year', label: 'Academic Year', type: 'select', required: true }
+                { name: 'department', label: 'Department', type: 'text', required: false, value: getFieldValue('department') },
+                { name: 'academic_year', label: 'Academic Year', type: 'text', required: false, value: getFieldValue('academic_year') },
+                { name: 'current_semester', label: 'Current Semester', type: 'text', required: false, value: getFieldValue('current_semester') },
+                { name: 'gpa', label: 'GPA', type: 'number', step: '0.01', min: '0', max: '10', required: false, value: getFieldValue('gpa') },
+                { name: 'enrollment_year', label: 'Enrollment Year', type: 'number', required: false, value: getFieldValue('enrollment_year') }
             ]
         });
     };
@@ -146,45 +215,42 @@ function initializeFormHandlers() {
     // Achievement management
     window.addAchievement = function() {
         showEditModal('add-achievement', {
-            title: 'Add New Achievement',
+            title: 'Add Achievement',
+            description: 'Keep your achievements up to date to highlight your strengths and growth.',
             fields: [
-                { name: 'title', label: 'Achievement Title', type: 'text', required: true },
-                { name: 'description', label: 'Description', type: 'textarea', required: false },
-                { name: 'date_achieved', label: 'Date Achieved', type: 'date', required: true },
-                { name: 'issuing_organization', label: 'Issuing Organization', type: 'text', required: true }
-            ]
+                { name: 'title', label: 'Achievement Title', type: 'text', placeholder: 'Leadership Excellence Award', required: true, helpText: 'Keep it short and descriptive.' },
+                { name: 'description', label: 'Description', type: 'textarea', placeholder: 'Describe the achievement and its impact.', required: false },
+                { name: 'date_achieved', label: 'Date Achieved', type: 'date', required: false },
+                { name: 'document', label: 'Supporting Document', type: 'file', required: false, accept: 'application/pdf,image/*', helpText: 'Optional. Upload a PDF or image up to 10 MB.' }
+            ],
+            submitLabel: 'Save Achievement',
+            enctype: 'multipart/form-data'
         });
     };
 
     window.editAchievement = function(achievementId) {
-        // Load achievement data and show edit modal
-        loadAchievementData(achievementId).then(data => {
-            showEditModal('edit-achievement', {
-                title: 'Edit Achievement',
-                fields: [
-                    { name: 'title', label: 'Achievement Title', type: 'text', required: true, value: data.title },
-                    { name: 'description', label: 'Description', type: 'textarea', required: false, value: data.description },
-                    { name: 'date_achieved', label: 'Date Achieved', type: 'date', required: true, value: data.date_achieved },
-                    { name: 'issuing_organization', label: 'Issuing Organization', type: 'text', required: true, value: data.issuing_organization }
-                ]
-            });
-        });
+        openAchievementEditor(achievementId);
     };
 
     window.deleteAchievement = function(achievementId) {
-        if (confirm('Are you sure you want to delete this achievement?')) {
-            deleteAchievementRequest(achievementId);
-        }
+        confirmAchievementDeletion(achievementId);
     };
 
     // Organization management
     window.joinOrganization = function() {
-        showOrganizationSelector();
+        if (window.ProfileOrganizations && typeof window.ProfileOrganizations.openJoinModal === 'function') {
+            window.ProfileOrganizations.openJoinModal();
+        }
     };
 
     window.leaveOrganization = function(orgId) {
+        if (!orgId) {
+            return;
+        }
         if (confirm('Are you sure you want to leave this organization?')) {
-            leaveOrganizationRequest(orgId);
+            if (window.ProfileOrganizations && typeof window.ProfileOrganizations.requestLeave === 'function') {
+                window.ProfileOrganizations.requestLeave(orgId);
+            }
         }
     };
 
@@ -203,207 +269,709 @@ function initializeQuickActions() {
 }
 
 // Modal System for Editing
-function showEditModal(type, config) {
-    // Remove existing modal
-    const existingModal = document.querySelector('.edit-modal');
-    if (existingModal) {
-        existingModal.remove();
+function showEditModal(type, config = {}) {
+    if (activeModal) {
+        closeEditModal(true);
     }
 
-    // Create modal
     const modal = document.createElement('div');
     modal.className = 'edit-modal';
+
+    const descriptionMarkup = config.description ? `<p class="modal-description">${config.description}</p>` : '';
+    const submitLabel = config.submitLabel || 'Save Changes';
+    const fieldsMarkup = Array.isArray(config.fields) ? config.fields.map(field => createFormField(field)).join('') : '';
+
     modal.innerHTML = `
-        <div class="modal-backdrop"></div>
-        <div class="modal-content">
+        <div class="modal-backdrop" data-modal-backdrop></div>
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modal-title-${type}">
             <div class="modal-header">
-                <h3>${config.title}</h3>
-                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+                <h3 id="modal-title-${type}">${config.title || 'Edit'}</h3>
+                <button type="button" class="modal-close" aria-label="Close" onclick="closeEditModal()">&times;</button>
             </div>
             <div class="modal-body">
+                ${descriptionMarkup}
                 <form id="edit-form-${type}" class="edit-form">
-                    ${config.fields.map(field => createFormField(field)).join('')}
+                    ${fieldsMarkup}
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveFormData('${type}')">Save Changes</button>
+                <button type="button" class="btn btn-primary" data-save>${submitLabel}</button>
             </div>
         </div>
     `;
 
     document.body.appendChild(modal);
-    
-    // Add event listeners
-    modal.querySelector('.modal-backdrop').addEventListener('click', closeEditModal);
-    
-    // Focus first input
-    const firstInput = modal.querySelector('input, select, textarea');
-    if (firstInput) {
-        setTimeout(() => firstInput.focus(), 100);
+    document.body.classList.add('modal-open');
+    activeModal = modal;
+    previouslyFocusedElement = document.activeElement;
+
+    const form = modal.querySelector('form');
+    if (form) {
+        if (config.enctype) {
+            form.setAttribute('enctype', config.enctype);
+        }
+        if (config.method) {
+            form.setAttribute('method', config.method);
+        }
+        form.addEventListener('submit', event => event.preventDefault());
     }
+
+    const saveButton = modal.querySelector('[data-save]');
+    if (saveButton) {
+        saveButton.addEventListener('click', () => window.saveFormData(type));
+        if (config.submitLabel) {
+            saveButton.textContent = config.submitLabel;
+        }
+    }
+
+    const backdrop = modal.querySelector('[data-modal-backdrop]');
+    if (backdrop) {
+        const handleBackdropClick = event => {
+            if (event.target === backdrop) {
+                closeEditModal();
+            }
+        };
+        backdrop.addEventListener('click', handleBackdropClick);
+        modal._backdropHandler = handleBackdropClick;
+    }
+
+    modalEscapeListener = event => {
+        if (event.key === 'Escape') {
+            closeEditModal();
+        }
+    };
+    document.addEventListener('keydown', modalEscapeListener);
+
+    const focusableSelector = 'a[href], area[href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusableElements = modal.querySelectorAll(focusableSelector);
+    const firstFocusable = focusableElements[0];
+    const lastFocusable = focusableElements[focusableElements.length - 1];
+
+    if (focusableElements.length > 0) {
+        modalFocusTrapListener = event => {
+            if (event.key !== 'Tab') {
+                return;
+            }
+
+            if (event.shiftKey && document.activeElement === firstFocusable) {
+                event.preventDefault();
+                lastFocusable.focus();
+            } else if (!event.shiftKey && document.activeElement === lastFocusable) {
+                event.preventDefault();
+                firstFocusable.focus();
+            }
+        };
+
+        modal.addEventListener('keydown', modalFocusTrapListener);
+        setTimeout(() => firstFocusable.focus(), 50);
+    }
+}
+
+function showConfirmationModal(config = {}) {
+    if (activeModal) {
+        closeEditModal(true);
+    }
+
+    const {
+        title = 'Confirm',
+        message = 'Are you sure?',
+        confirmLabel = 'Confirm',
+        cancelLabel = 'Cancel',
+        confirmType = 'primary',
+        onConfirm,
+    } = config;
+
+    const modal = document.createElement('div');
+    modal.className = 'edit-modal confirmation-modal';
+
+    const confirmClass = confirmType === 'danger' ? 'btn btn-danger' : 'btn btn-primary';
+
+    modal.innerHTML = `
+        <div class="modal-backdrop" data-modal-backdrop></div>
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modal-title-confirm">
+            <div class="modal-header">
+                <h3 id="modal-title-confirm">${title}</h3>
+                <button type="button" class="modal-close" aria-label="Close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>${message}</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">${cancelLabel}</button>
+                <button type="button" class="${confirmClass}" data-confirm>${confirmLabel}</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    document.body.classList.add('modal-open');
+    activeModal = modal;
+    previouslyFocusedElement = document.activeElement;
+
+    const confirmButton = modal.querySelector('[data-confirm]');
+    if (confirmButton) {
+        confirmButton.addEventListener('click', () => {
+            confirmButton.disabled = true;
+            closeEditModal();
+            try {
+                const result = onConfirm ? onConfirm() : null;
+                if (result && typeof result.then === 'function') {
+                    result.catch(error => {
+                        console.error('Confirmation callback error:', error);
+                    });
+                }
+            } catch (error) {
+                console.error('Confirmation callback error:', error);
+            }
+        });
+    }
+
+    const backdrop = modal.querySelector('[data-modal-backdrop]');
+    if (backdrop) {
+        const handleBackdropClick = event => {
+            if (event.target === backdrop) {
+                closeEditModal();
+            }
+        };
+        backdrop.addEventListener('click', handleBackdropClick);
+        modal._backdropHandler = handleBackdropClick;
+    }
+
+    modalEscapeListener = event => {
+        if (event.key === 'Escape') {
+            closeEditModal();
+        }
+    };
+    document.addEventListener('keydown', modalEscapeListener);
+
+    setTimeout(() => {
+        confirmButton?.focus();
+    }, 50);
 }
 
 function createFormField(field) {
     const value = field.value || '';
+    const safeValue = escapeHtml(value);
     const required = field.required ? 'required' : '';
     const readonly = field.readonly ? 'readonly' : '';
-    
+    const placeholder = field.placeholder ? `placeholder="${field.placeholder}"` : '';
+    const helpText = field.helpText ? `<p class="form-help">${field.helpText}</p>` : '';
+    const step = field.step ? `step="${field.step}"` : '';
+    const min = field.min ? `min="${field.min}"` : '';
+    const max = field.max ? `max="${field.max}"` : '';
+
     let input = '';
-    
+
     switch (field.type) {
         case 'textarea':
-            input = `<textarea name="${field.name}" ${required} ${readonly} placeholder="Enter ${field.label.toLowerCase()}">${value}</textarea>`;
+            input = `<textarea name="${field.name}" ${required} ${readonly} ${placeholder}>${safeValue}</textarea>`;
             break;
         case 'select':
-            // For select fields, you'd populate options based on the field name
             input = `<select name="${field.name}" ${required} ${readonly}>
                 <option value="">Select ${field.label}</option>
-                <!-- Options would be populated dynamically -->
             </select>`;
             break;
+        case 'file':
+            {
+                const accept = field.accept ? `accept="${field.accept}"` : '';
+                input = `<input type="file" name="${field.name}" ${required} ${accept}>`;
+            }
+            break;
         default:
-            input = `<input type="${field.type}" name="${field.name}" value="${value}" ${required} ${readonly} placeholder="Enter ${field.label.toLowerCase()}">`;
+            input = `<input type="${field.type}" name="${field.name}" value="${safeValue}" ${required} ${readonly} ${placeholder} ${step} ${min} ${max}>`;
     }
-    
+
     return `
         <div class="form-group">
-            <label for="${field.name}">${field.label}</label>
+            <label for="${field.name}">${field.label}${field.required ? ' <span class="required">*</span>' : ''}</label>
             ${input}
+            ${helpText}
         </div>
     `;
 }
 
-window.closeEditModal = function() {
-    const modal = document.querySelector('.edit-modal');
-    if (modal) {
-        modal.remove();
+window.closeEditModal = function(skipFocusRestore = false) {
+    if (!activeModal) {
+        const existingModal = document.querySelector('.edit-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        document.body.classList.remove('modal-open');
+        return;
     }
+
+    if (activeModal._backdropHandler) {
+        const backdrop = activeModal.querySelector('[data-modal-backdrop]');
+        if (backdrop) {
+            backdrop.removeEventListener('click', activeModal._backdropHandler);
+        }
+        delete activeModal._backdropHandler;
+    }
+
+    if (modalEscapeListener) {
+        document.removeEventListener('keydown', modalEscapeListener);
+        modalEscapeListener = null;
+    }
+
+    if (modalFocusTrapListener) {
+        activeModal.removeEventListener('keydown', modalFocusTrapListener);
+        modalFocusTrapListener = null;
+    }
+
+    activeModal.remove();
+    document.body.classList.remove('modal-open');
+
+    if (!skipFocusRestore && previouslyFocusedElement && typeof previouslyFocusedElement.focus === 'function') {
+        previouslyFocusedElement.focus();
+    }
+
+    activeModal = null;
+    previouslyFocusedElement = null;
+    achievementBeingEdited = null;
+    achievementPendingDeletion = null;
 };
 
 window.saveFormData = function(type) {
     const form = document.querySelector(`#edit-form-${type}`);
     if (!form) return;
-    
+    const isMultipart = form.getAttribute('enctype') === 'multipart/form-data';
     const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
-    
-    // Show loading state
-    const saveButton = document.querySelector('.modal-footer .btn-primary');
-    const originalText = saveButton.textContent;
-    saveButton.textContent = 'Saving...';
-    saveButton.disabled = true;
-    
-    // Send data to appropriate endpoint
-    submitFormData(type, data)
+    const payload = isMultipart ? formData : Object.fromEntries(formData.entries());
+
+    const saveButton = activeModal?.querySelector('[data-save]');
+    const originalText = saveButton ? saveButton.textContent : null;
+    if (saveButton) {
+        saveButton.textContent = 'Saving…';
+        saveButton.disabled = true;
+    }
+
+    const submissionOptions = { isMultipart };
+    if (type === 'edit-achievement') {
+        submissionOptions.achievementId = achievementBeingEdited;
+    }
+
+    submitFormData(type, payload, submissionOptions)
         .then(response => {
-            if (response.success) {
-                showNotification('Changes saved successfully!', 'success');
-                closeEditModal();
-                // Refresh page to show changes
-                window.location.reload();
-            } else {
+            if (!response.success) {
                 throw new Error(response.message || 'Failed to save changes');
+            }
+
+            if (type === 'add-achievement') {
+                showNotification(response.message || 'Achievement added successfully!', 'success');
+                closeEditModal();
+                if (response.achievement) {
+                    achievementsCache = [response.achievement, ...achievementsCache];
+                    renderAchievements(achievementsCache);
+                    updateAchievementsStat(achievementsCache.length);
+                } else {
+                    loadStudentAchievements(true);
+                }
+            } else if (type === 'edit-achievement') {
+                showNotification(response.message || 'Achievement updated successfully!', 'success');
+                closeEditModal();
+                if (response.achievement) {
+                    const index = achievementsCache.findIndex(item => String(item.id) === String(response.achievement.id));
+                    if (index !== -1) {
+                        achievementsCache[index] = response.achievement;
+                    }
+                    renderAchievements(achievementsCache);
+                    updateAchievementsStat(achievementsCache.length);
+                }
+                loadStudentAchievements(true);
+                achievementBeingEdited = null;
+            } else {
+                showNotification(response.message || 'Changes saved successfully!', 'success');
+                closeEditModal();
+                if (type === 'academic-info' && response.data) {
+                    applyAcademicInfoUpdate(response.data);
+                } else if (type === 'personal-info' && response.data) {
+                    applyPersonalInfoUpdate(response.data);
+                } else {
+                    window.location.reload();
+                }
             }
         })
         .catch(error => {
             showNotification(error.message || 'Failed to save changes', 'error');
         })
         .finally(() => {
-            saveButton.textContent = originalText;
-            saveButton.disabled = false;
+            if (saveButton) {
+                saveButton.textContent = originalText || 'Save Changes';
+                saveButton.disabled = false;
+            }
         });
 };
 
 // API Calls
-async function submitFormData(type, data) {
+async function submitFormData(type, data, options = {}) {
+    const { isMultipart = false, achievementId = null } = options;
     const endpoints = {
         'personal-info': '/api/student/update-personal-info/',
         'academic-info': '/api/student/update-academic-info/',
-        'add-achievement': '/api/student/add-achievement/',
-        'edit-achievement': '/api/student/update-achievement/'
+        'add-achievement': '/api/student/achievements/',
+        'edit-achievement': '/api/student/achievements/'
     };
     
-    const endpoint = endpoints[type];
+    let endpoint = endpoints[type];
     if (!endpoint) {
         throw new Error('Unknown form type');
     }
-    
-    const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken(),
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: JSON.stringify(data)
-    });
-    
-    return await response.json();
-}
 
-async function loadAchievementData(achievementId) {
-    // Mock data for now - would fetch from API
-    return {
-        title: 'Sample Achievement',
-        description: 'Sample description',
-        date_achieved: '2024-01-01',
-        issuing_organization: 'Sample Organization'
+    if (type === 'edit-achievement') {
+        if (!achievementId) {
+            throw new Error('Missing achievement identifier');
+        }
+        endpoint = `${endpoint}${achievementId}/`;
+    }
+    const headers = {
+        'X-CSRFToken': getCsrfToken(),
+        'X-Requested-With': 'XMLHttpRequest'
     };
+
+    const fetchOptions = {
+        method: 'POST',
+        headers,
+        body: null
+    };
+
+    if (isMultipart) {
+        fetchOptions.body = data;
+    } else {
+        headers['Content-Type'] = 'application/json';
+        fetchOptions.body = JSON.stringify(data);
+    }
+
+    const response = await fetch(endpoint, fetchOptions);
+
+    let payload;
+    try {
+        payload = await response.json();
+    } catch (error) {
+        throw new Error('Unexpected server response');
+    }
+
+    if (!response.ok) {
+        const message = payload?.message || payload?.errors || 'Failed to save changes';
+        throw new Error(Array.isArray(message) ? message.join(', ') : message);
+    }
+
+    return payload;
 }
 
 async function deleteAchievementRequest(achievementId) {
+    const response = await fetch(`/api/student/achievements/${achievementId}/`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    });
+
+    let payload = {};
     try {
-        const response = await fetch(`/api/student/delete-achievement/${achievementId}/`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRFToken': getCsrfToken(),
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-        
-        if (response.ok) {
-            showNotification('Achievement deleted successfully', 'success');
-            // Remove the achievement card from DOM
-            const achievementCard = document.querySelector(`[data-achievement-id="${achievementId}"]`);
-            if (achievementCard) {
-                achievementCard.remove();
-            }
-        } else {
-            throw new Error('Failed to delete achievement');
+        if (response.status !== 204) {
+            payload = await response.json();
         }
     } catch (error) {
-        showNotification('Failed to delete achievement', 'error');
+        // Ignore JSON parse errors for empty bodies
+    }
+
+    if (!response.ok || payload.success === false) {
+        const message = payload?.message || 'Failed to delete achievement.';
+        throw new Error(message);
+    }
+
+    return payload;
+}
+
+function initializeAchievementsModule() {
+    hydrateInitialAchievements();
+    loadStudentAchievements(true);
+}
+
+function hydrateInitialAchievements() {
+    if (achievementsInitialized) {
+        return;
+    }
+
+    try {
+        const script = document.getElementById('student-achievements-data');
+        if (!script) {
+            return;
+        }
+        const parsed = JSON.parse(script.textContent || '[]');
+        achievementsCache = Array.isArray(parsed) ? parsed : [];
+        renderAchievements(achievementsCache);
+        updateAchievementsStat(achievementsCache.length);
+        achievementsInitialized = true;
+    } catch (error) {
+        console.error('Failed to hydrate achievements payload:', error);
     }
 }
 
-function showOrganizationSelector() {
-    showNotification('Organization management coming soon!', 'info');
+async function loadStudentAchievements(forceRefresh = false) {
+    if (achievementsInitialized && !forceRefresh) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/student/achievements/', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        if (!response.ok) {
+            throw new Error('Unable to load achievements');
+        }
+
+        const data = await response.json();
+        const items = Array.isArray(data.achievements) ? data.achievements : [];
+        achievementsCache = items;
+        renderAchievements(achievementsCache);
+        updateAchievementsStat(achievementsCache.length);
+        achievementsInitialized = true;
+    } catch (error) {
+        console.error('Failed to load achievements:', error);
+        if (!achievementsInitialized) {
+            renderAchievements([]);
+        }
+    }
 }
 
-async function leaveOrganizationRequest(orgId) {
-    try {
-        const response = await fetch(`/api/student/leave-organization/${orgId}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCsrfToken(),
-                'X-Requested-With': 'XMLHttpRequest'
+function applyAcademicInfoUpdate(payload) {
+    const fieldMap = {
+        registration_number: value => value || 'Not Set',
+        department: value => value || 'Not Set',
+        academic_year: value => value || 'Not Set',
+        current_semester: value => value || 'Not Set',
+        gpa: value => {
+            if (value === null || value === undefined || value === '') {
+                return 'Not Set';
             }
-        });
-        
-        if (response.ok) {
-            showNotification('Left organization successfully', 'success');
-            // Remove the organization card from DOM
-            const orgCard = document.querySelector(`[data-org-id="${orgId}"]`);
-            if (orgCard) {
-                orgCard.remove();
+            const num = Number(value);
+            if (Number.isNaN(num)) {
+                return value;
             }
-        } else {
-            throw new Error('Failed to leave organization');
+            return num.toFixed(2);
+        },
+        enrollment_year: value => value || 'Not Set',
+    };
+
+    Object.keys(fieldMap).forEach(key => {
+        const el = document.querySelector(`[data-field="${key}"]`);
+        if (!el) {
+            return;
         }
-    } catch (error) {
-        showNotification('Failed to leave organization', 'error');
+        const rawValue = payload[key];
+        const displayValue = fieldMap[key](rawValue);
+        el.textContent = displayValue;
+        if (rawValue === null || rawValue === undefined) {
+            el.setAttribute('data-value', '');
+        } else {
+            el.setAttribute('data-value', `${rawValue}`);
+        }
+    });
+
+    updateAcademicStatus();
+}
+
+function renderAchievements(items) {
+    const list = document.getElementById('achievements-list');
+    const emptyState = document.getElementById('achievements-empty');
+    if (!list || !emptyState) {
+        return;
     }
+
+    if (!items || items.length === 0) {
+        list.innerHTML = '';
+        list.setAttribute('hidden', 'hidden');
+        emptyState.removeAttribute('hidden');
+        return;
+    }
+
+    const markup = items.map(achievementCardTemplate).join('');
+    list.innerHTML = markup;
+    list.removeAttribute('hidden');
+    emptyState.setAttribute('hidden', 'hidden');
+    attachAchievementListeners();
+}
+
+function achievementCardTemplate(item) {
+    const documentLink = item.document_url
+        ? `<div class="achievement-document">
+                <a class="achievement-doc-link" href="${item.document_url}" target="_blank" rel="noopener">
+                    <i class="fas fa-paperclip"></i>
+                    ${item.document_name ? escapeHtml(item.document_name) : 'View Document'}
+                </a>
+           </div>`
+        : '';
+
+    const dateMarkup = item.date_display
+        ? `<div class="meta-item">
+                <i class="fas fa-calendar"></i>
+                <span>${escapeHtml(item.date_display)}</span>
+           </div>`
+        : '';
+
+    const descriptionMarkup = item.description
+        ? `<div class="achievement-description">${escapeHtml(item.description)}</div>`
+        : '';
+
+    return `
+        <div class="achievement-card-large" data-achievement-id="${item.id}">
+            <div class="achievement-header">
+                <div class="achievement-icon">
+                    <i class="fas fa-trophy"></i>
+                </div>
+                <div class="achievement-actions">
+                    <button type="button" class="action-btn achievement-action-btn" data-edit-button tabindex="0" aria-label="Edit achievement">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="action-btn achievement-delete-btn" data-delete-button tabindex="0" aria-label="Delete achievement">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="achievement-content">
+                <h4>${escapeHtml(item.title)}</h4>
+                <div class="achievement-meta">
+                    ${dateMarkup}
+                </div>
+                ${descriptionMarkup}
+                ${documentLink}
+            </div>
+        </div>
+    `;
+}
+
+function attachAchievementListeners() {
+    const cards = document.querySelectorAll('.achievement-card-large[data-achievement-id]');
+    cards.forEach(card => {
+        const id = parseInt(card.getAttribute('data-achievement-id'), 10);
+        if (Number.isNaN(id)) {
+            return;
+        }
+
+        const editButton = card.querySelector('[data-edit-button]');
+        if (editButton) {
+            editButton.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                openAchievementEditor(id);
+            });
+        }
+
+        const deleteButton = card.querySelector('[data-delete-button]');
+        if (deleteButton) {
+            deleteButton.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                confirmAchievementDeletion(id);
+            });
+        }
+
+        card.addEventListener('click', event => {
+            if (event.target.closest('.achievement-doc-link')) {
+                return;
+            }
+            if (event.target.closest('[data-edit-button]')) {
+                return;
+            }
+            openAchievementEditor(id);
+        });
+    });
+}
+
+function openAchievementEditor(achievementId) {
+    const achievement = achievementsCache.find(item => String(item.id) === String(achievementId));
+    if (!achievement) {
+        showNotification('Achievement details could not be loaded.', 'error');
+        return;
+    }
+
+    achievementBeingEdited = achievementId;
+
+    const documentUrl = achievement.document_url ? encodeURI(achievement.document_url) : null;
+    const documentHelp = documentUrl
+        ? `Current document: <a href="${documentUrl}" target="_blank" rel="noopener">${escapeHtml(achievement.document_name || 'View document')}</a>`
+        : 'Optional. Upload a PDF or image up to 10 MB.';
+
+    showEditModal('edit-achievement', {
+        title: 'Edit Achievement',
+        description: 'Update the details below and save to keep your achievements current.',
+        submitLabel: 'Update Achievement',
+        enctype: 'multipart/form-data',
+        fields: [
+            { name: 'title', label: 'Achievement Title', type: 'text', required: true, value: achievement.title },
+            { name: 'description', label: 'Description', type: 'textarea', required: false, value: achievement.description || '' },
+            { name: 'date_achieved', label: 'Date Achieved', type: 'date', required: false, value: achievement.date_achieved || '' },
+            {
+                name: 'document',
+                label: 'Supporting Document',
+                type: 'file',
+                required: false,
+                accept: 'application/pdf,image/*',
+                helpText: documentHelp
+            }
+        ]
+    });
+}
+
+function confirmAchievementDeletion(achievementId) {
+    const achievement = achievementsCache.find(item => String(item.id) === String(achievementId));
+    if (!achievement) {
+        showNotification('Achievement details could not be loaded.', 'error');
+        return;
+    }
+
+    achievementPendingDeletion = achievementId;
+
+    showConfirmationModal({
+        title: 'Delete Achievement',
+        message: `Are you sure you want to delete "${escapeHtml(achievement.title)}"? This action cannot be undone.`,
+        confirmLabel: 'Delete',
+        confirmType: 'danger',
+        onConfirm: () => executeAchievementDeletion(achievementId),
+    });
+}
+
+async function executeAchievementDeletion(achievementId) {
+    try {
+        await deleteAchievementRequest(achievementId);
+        achievementsCache = achievementsCache.filter(item => String(item.id) !== String(achievementId));
+        renderAchievements(achievementsCache);
+        updateAchievementsStat(achievementsCache.length);
+        showNotification('Achievement deleted successfully.', 'success');
+    } catch (error) {
+        showNotification(error.message || 'Failed to delete achievement.', 'error');
+    } finally {
+        achievementPendingDeletion = null;
+    }
+}
+
+function updateAchievementsStat(count) {
+    const statCards = document.querySelectorAll('.stat-card');
+    statCards.forEach(card => {
+        const label = card.querySelector('.stat-label');
+        if (label && label.textContent.trim() === 'ACHIEVEMENTS') {
+            const number = card.querySelector('.stat-number');
+            if (number) {
+                number.textContent = count != null ? count : 0;
+            }
+        }
+    });
+}
+
+function escapeHtml(value) {
+    if (value == null) {
+        return '';
+    }
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 // Utility Functions
@@ -416,7 +984,7 @@ function getCsrfToken() {
 function showNotification(message, type = 'info', duration = 5000) {
     // Use the existing notification system from profile.js
     if (window.ProfilePage && window.ProfilePage.showNotification) {
-        window.ProfilePage.showNotification(message, type);
+        window.ProfilePage.showNotification(message, type, duration);
     } else {
         // Fallback notification
         console.log(`[${type.toUpperCase()}] ${message}`);

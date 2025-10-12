@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Organization Membership Requests{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'core/css/admin_join_requests.css' %}">
+<div class="admin-join-requests">
+  <div class="page-header">
+    <a href="{% url 'dashboard' %}" class="btn btn-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+  <h1>Organization Membership Requests</h1>
+  <p class="subheading">Review and manage membership join and leave requests submitted by students and faculty.</p>
+  </div>
+
+  <div class="summary-bar">
+    <div class="summary-item">
+      <span class="summary-label">Pending Requests</span>
+      <span class="summary-value">{{ pending_count }}</span>
+    </div>
+  </div>
+
+  <form method="get" class="filter-form">
+    <label for="status-filter">Filter by status</label>
+    <select id="status-filter" name="status">
+      <option value="All"{% if status_filter == 'All' %} selected{% endif %}>All</option>
+      {% for status in status_choices %}
+      <option value="{{ status }}"{% if status_filter == status %} selected{% endif %}>{{ status }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary">Apply</button>
+  </form>
+
+  {% if join_requests %}
+  <div class="join-requests-table-wrapper">
+    <table class="join-requests-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Organization</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Requested On</th>
+          <th>Updated On</th>
+          <th>Response</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for request in join_requests %}
+        <tr>
+          <td>
+            <div class="user-summary">
+              <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+              <div class="user-meta">{{ request.user.email }}</div>
+            </div>
+          </td>
+          <td>
+            <div class="organization-summary">
+              <strong>{{ request.organization.name }}</strong>
+              {% if request.organization.org_type %}
+              <div class="organization-meta">{{ request.organization.org_type.name }}</div>
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            <span class="status-chip status-type">{{ request.get_request_type_display }}</span>
+          </td>
+          <td>
+            {% if request.status == 'Pending' and request.is_seen %}
+              <span class="status-chip status-seen">Seen</span>
+            {% else %}
+              <span class="status-chip status-{{ request.status|lower }}">{{ request.status }}</span>
+            {% endif %}
+          </td>
+          <td>{{ request.requested_on|date:"M d, Y H:i" }}</td>
+          <td>{{ request.updated_on|date:"M d, Y H:i" }}</td>
+          <td>
+            {% if request.response_message %}
+              <div class="response-message">{{ request.response_message }}</div>
+            {% else %}
+              <em>No response yet</em>
+            {% endif %}
+          </td>
+          <td>
+            <form method="post" class="join-request-actions">
+              {% csrf_token %}
+              <input type="hidden" name="request_id" value="{{ request.id }}">
+              <textarea name="response_message" rows="2" placeholder="Optional response"{% if request.status != 'Pending' %} readonly{% endif %}>{{ request.response_message }}</textarea>
+              <div class="action-buttons">
+                <button type="submit" name="action" value="mark_seen" class="btn btn-secondary"{% if request.status != 'Pending' or request.is_seen %} disabled{% endif %}>Mark Seen</button>
+                <button type="submit" name="action" value="approve" class="btn btn-success"{% if request.status != 'Pending' %} disabled{% endif %}>Approve</button>
+                <button type="submit" name="action" value="reject" class="btn btn-danger"{% if request.status != 'Pending' %} disabled{% endif %}>Reject</button>
+              </div>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-clipboard-list"></i></div>
+    <h3>No membership requests found</h3>
+    <p>Users have not submitted any join or leave requests yet. Check back later.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

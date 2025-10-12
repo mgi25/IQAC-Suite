@@ -40,7 +40,7 @@
 
     /* ----- Page shell (reuses admin_master_data.css primitives) ----- */
     .permissions-page .topbar h1{margin:0;font-size:28px;font-weight:800;color:var(--ink)}
-  .permissions-page .controls-container{position:sticky;top:0;z-index:40;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 16px;box-shadow:var(--shadow)}
+  .permissions-page .controls-container{position:sticky;top:0;z-index:40;background:transparent;border:0;border-radius:0;padding:0;box-shadow:none}
 
   /* Single-row toolbar */
   .permissions-page .toolbar-row{display:flex;align-items:center;gap:14px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
@@ -48,10 +48,10 @@
       position:sticky;
       top:0;
       z-index:50;
-      background:#fff;
-      border-bottom:1px solid var(--border);
-      box-shadow:0 2px 8px rgba(0,0,0,0.06);
-      margin-bottom:16px;
+      background:transparent;
+      border:0;
+      box-shadow:none;
+      margin-bottom:12px;
     }
 
     /* Professional toolbar-style filter design */
@@ -62,7 +62,7 @@
       padding:20px 24px;
       margin:12px 0;
       display:grid;
-      grid-template-columns:1fr 1.2fr 1.2fr 2fr auto;
+      grid-template-columns:1fr 1fr 1fr 1.6fr auto; /* even fill + larger search */
       gap:16px 24px;
       align-items:end;
       min-height:44px;
@@ -86,7 +86,7 @@
       display:flex;
       flex-direction:column;
       gap:6px;
-      min-width:180px;
+      min-width:0; /* allow grid to shrink without wrapping */
     }
     
     .permissions-page .toolbar-field label{
@@ -131,6 +131,46 @@
       box-shadow:0 1px 2px rgba(0,0,0,0.05);
       min-width:180px;
     }
+
+    /* Compact dropdown (users/modules suggestions) */
+    .permissions-page .suggest-dropdown{
+      position:absolute;
+      top:100%;
+      left:0;
+      right:0;
+      margin-top:6px;
+      background:#fff;
+      border:1px solid #e1e8ed;
+      border-radius:10px;
+      box-shadow:0 8px 24px rgba(11,53,102,.12);
+      z-index:60;
+      max-height:260px;
+      overflow:auto;
+      padding:6px;
+      display:none;
+    }
+    .permissions-page .suggest-item{
+      display:flex;align-items:center;gap:10px;
+      padding:10px 12px;border-radius:8px;cursor:pointer;
+      color:#0f172a;font-size:14px;
+    }
+    .permissions-page .suggest-item:hover{background:#f5f8fc}
+    .permissions-page .suggest-empty{padding:12px;color:#6b7280;font-size:13px}
+    .permissions-page .badge-count{margin-left:8px;background:#eef2ff;color:#1e3a8a;font-weight:700;border-radius:9999px;padding:2px 8px;font-size:12px}
+
+    /* Hide native multi-select but keep in DOM for form submit */
+    .permissions-page .hidden-select{position:absolute !important; left:-9999px !important; width:1px; height:1px; opacity:0;}
+
+    /* Inline actions inside input container */
+  .permissions-page .inline-actions{position:absolute; right:8px; top:50%; transform:translateY(-50%); display:flex; align-items:center; gap:6px}
+  .permissions-page .btn-inline{height:44px; padding:0 12px; border:1px solid #d1d5db; background:#f8fafc; color:#334155; border-radius:8px; font-size:13px; cursor:pointer}
+    .permissions-page .btn-inline:hover{background:#eef2f7}
+
+  .permissions-page .inline-row{display:flex; align-items:center; gap:10px}
+
+    /* Pulse highlight when navigating to a module */
+    .permissions-page .pulse-highlight{animation:pulse-h 1.2s ease 1}
+    @keyframes pulse-h{0%{box-shadow:0 0 0 0 rgba(30,96,177,.45)}70%{box-shadow:0 0 0 8px rgba(30,96,177,0)}100%{box-shadow:0 0 0 0 rgba(30,96,177,0)}}
     
     .permissions-page .toolbar-field select::placeholder,
     .permissions-page .toolbar-field input::placeholder{
@@ -156,26 +196,10 @@
       box-shadow:0 1px 3px rgba(0,0,0,0.1);
     }
     
-    /* Organization Type field - w-1/5 equivalent */
-    .permissions-page .org-type-field{
-      flex:0 0 auto;
-      min-width:180px;
-      max-width:220px;
-    }
-    
-    /* Organization Role field - w-1/4 equivalent */
-    .permissions-page .org-role-field{
-      flex:0 0 auto;
-      min-width:200px;
-      max-width:250px;
-    }
-    
-    /* User field special styling - w-1/4 equivalent */
-    .permissions-page .user-toolbar-field{
-      flex:0 0 auto;
-      min-width:200px;
-      max-width:280px;
-    }
+    /* Allow all fields to flex evenly across grid */
+    .permissions-page .org-type-field,
+    .permissions-page .org-role-field,
+    .permissions-page .user-toolbar-field{ min-width:0; max-width:none; }
     
     .permissions-page .user-toolbar-field .user-filter-input{
       margin-bottom:6px;
@@ -314,36 +338,16 @@
     
     @media (max-width: 980px){
       .permissions-page .toolbar-filter{
-        grid-template-columns:1fr 1fr 1fr;
-        grid-template-rows:auto auto;
+        grid-template-columns:1fr 1fr; /* two neat columns */
+        grid-auto-rows:auto;
         gap:16px 20px;
-        align-items:start;
+        align-items:end;
       }
-      
-      .permissions-page .search-toolbar-field{
-        grid-column:1 / -1;
-        order:1;
-      }
-      
-      .permissions-page .toolbar-save-btn{
-        grid-column:1 / -1;
-        order:2;
-        justify-self:center;
-        min-width:200px;
-        margin-top:8px;
-      }
-      
-      .permissions-page .org-type-field{
-        order:3;
-      }
-      
-      .permissions-page .org-role-field{
-        order:4;
-      }
-      
-      .permissions-page .user-toolbar-field{
-        order:5;
-      }
+      .permissions-page .org-type-field{grid-column:1}
+      .permissions-page .org-role-field{grid-column:2}
+      .permissions-page .user-toolbar-field{grid-column:1 / -1}
+      .permissions-page .search-toolbar-field{grid-column:1}
+      .permissions-page .toolbar-save-btn{grid-column:2; justify-self:end; min-width:180px}
     }
     
     @media (max-width: 640px){
@@ -600,34 +604,31 @@
         </div>
       </div>
 
-      <!-- Users - w-1/4 equivalent -->
+      <!-- Users - single-row with combobox suggestions -->
       <div class="toolbar-field user-toolbar-field">
         <label>Users</label>
-        <div class="toolbar-input-container">
+        <div class="toolbar-input-container inline-row" style="position:relative">
           <i class="fas fa-users input-icon"></i>
-          <input type="text" id="userFilter" class="user-filter-input" placeholder="Search users…">
+          <input type="text" id="userFilter" class="user-filter-input" placeholder="Search users…" autocomplete="off" aria-expanded="false" aria-haspopup="listbox">
+          <button type="button" id="clearUserBtn" class="btn-inline" title="Clear user">Clear</button>
+          <div id="userSuggest" class="suggest-dropdown" role="listbox" aria-label="User suggestions"></div>
         </div>
-        <div class="toolbar-input-container">
-          <i class="fas fa-user-check input-icon"></i>
-          <select id="userSelect" name="users" multiple aria-label="Users" class="user-select">
-            {% for u in users %}
-              <option value="{{ u.id }}" {% if selected_user == u.id|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="user-actions">
-          <button type="button" id="selectAllUsersBtn" class="btn btn-secondary btn-micro">Select All</button>
-          <small class="hint">Ctrl/Cmd for multiple</small>
-        </div>
+        <!-- Hidden multi-select preserved for submission -->
+        <select id="userSelect" name="users" multiple aria-label="Users" class="hidden-select">
+          {% for u in users %}
+            <option value="{{ u.id }}" {% if selected_user == u.id|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>
+          {% endfor %}
+        </select>
       </div>
 
       <!-- Search Modules - flex-grow to take remaining space -->
       <div class="toolbar-field search-toolbar-field">
         <label>Search Modules</label>
-        <div class="search-container">
+        <div class="search-container" style="position:relative">
           <i class="fas fa-search input-icon"></i>
-          <input id="globalSearch" type="text" placeholder="Search modules and permissions…" autocomplete="off" aria-label="Search modules">
+          <input id="globalSearch" type="text" placeholder="Search modules and permissions…" autocomplete="off" aria-label="Search modules" aria-expanded="false" aria-haspopup="listbox">
           <button class="search-clear" type="button" id="clearSearchBtn" title="Clear search">×</button>
+          <div id="moduleSuggest" class="suggest-dropdown" role="listbox" aria-label="Module suggestions"></div>
         </div>
       </div>
 
@@ -716,20 +717,202 @@
     // Show initial loading while we render the tree (in case of big data) – will hide after first render
     showOverlay('loadingOverlay', true);
     
-    // --- User filter ---
+  // Populate initial view based on selection present in the query (role/user)
+  setTimeout(()=>{ fetchAssignedForCurrentSelection(); }, 0);
+
+  // --- User combobox: search-as-you-type suggestions ---
     const userFilter = $('#userFilter');
+    const userSelectHidden = $('#userSelect');
+    const userSuggest = $('#userSuggest');
+    function listUsers() {
+      return Array.from(userSelectHidden.options).map(o=>({id:o.value, name:o.textContent||''}));
+    }
+    function selectedUserIds() {
+      return new Set(Array.from(userSelectHidden.selectedOptions).map(o=>o.value));
+    }
+    function renderUserSuggestions(term) {
+      if(!userSuggest) return;
+      const q = (term||'').toLowerCase();
+      const sel = selectedUserIds();
+      const matches = listUsers().filter(u => !q || u.name.toLowerCase().includes(q)).slice(0, 50);
+      userSuggest.innerHTML = '';
+      if(matches.length === 0){
+        userSuggest.innerHTML = '<div class="suggest-empty">No users found</div>';
+      } else {
+        for(const u of matches){
+          const div = document.createElement('div');
+          div.className = 'suggest-item';
+          div.setAttribute('role','option');
+          div.dataset.id = u.id;
+          div.innerHTML = `<i class="fas fa-user-circle" style="color:#1e60b1"></i><span>${u.name}</span>${sel.has(u.id)?'<span class="badge-count">Selected</span>':''}`;
+          div.addEventListener('click', async () => {
+            // Single-select: choose this user and fetch assigned permissions
+            const opt = Array.from(userSelectHidden.options).find(o=>o.value===u.id);
+            if(opt){
+              Array.from(userSelectHidden.options).forEach(o=>o.selected=false);
+              opt.selected = true;
+              await fetchAssignedForCurrentSelection();
+            }
+            hideUserSuggestions();
+          });
+          userSuggest.appendChild(div);
+        }
+      }
+      userSuggest.style.display = 'block';
+      userFilter.setAttribute('aria-expanded','true');
+    }
+    function hideUserSuggestions(){ if(userSuggest){ userSuggest.style.display='none'; } userFilter?.setAttribute('aria-expanded','false'); }
     if(userFilter){
-      // userSelect is declared later in the main variables section
-      const userSelectEl = $('#userSelect');
-      userFilter.addEventListener('input', ()=>{
-        const term = userFilter.value.trim().toLowerCase();
-        Array.from(userSelectEl.options).forEach(opt=>{
-          const txt = (opt.textContent||'').toLowerCase();
-          opt.style.display = (!term || txt.includes(term)) ? '' : 'none';
-        });
+      userFilter.addEventListener('input', ()=> renderUserSuggestions(userFilter.value));
+      userFilter.addEventListener('focus', ()=> renderUserSuggestions(userFilter.value));
+      document.addEventListener('click', (e)=>{ if(!e.target.closest('.user-toolbar-field')) hideUserSuggestions(); });
+    }
+
+    // (Removed) Select-All users button
+    // Clear user selection button
+    const clearUserBtn = $('#clearUserBtn');
+    if(clearUserBtn){
+      clearUserBtn.addEventListener('click', ()=>{
+        if(userFilter) userFilter.value='';
+        if(userSelectHidden) Array.from(userSelectHidden.options).forEach(o=>o.selected=false);
+        const roleEl = $('#orgRoleSelect');
+        if(roleEl && roleEl.value){
+          fetchAssignedForCurrentSelection();
+        } else {
+          assigned = [];
+          available = buildAvailableList(fullNavTree, assigned);
+          render();
+        }
+        hideUserSuggestions();
       });
     }
+
+    // Fetch assigned permissions for selected user and rebuild panels
+    async function fetchAssignedForCurrentSelection(){
+      try{
+        const selUsers = Array.from(userSelectHidden.selectedOptions).map(o=>o.value).filter(Boolean);
+        const roleEl = $('#orgRoleSelect');
+        const roleId = roleEl ? (roleEl.value||'') : '';
+        const orgTypeEl = $('#orgTypeSelect');
+        const orgEl = $('#orgSelect');
+        // Priority: specific user -> by role -> none (blank)
+        let url = null;
+        if(selUsers.length === 1){
+          // Show direct assignments for a specific user
+          url = `${'{% url "api_get_sidebar_permissions" %}'}?user=${encodeURIComponent(selUsers[0])}&effective=0`;
+        } else if(roleId){
+          // First try direct-only entries for this role id
+          const base = `{% url "api_get_sidebar_permissions" %}`;
+          const qp0 = new URLSearchParams();
+          qp0.set('role', roleId);
+          qp0.set('effective', '0');
+          if(orgTypeEl && orgTypeEl.value) qp0.set('org_type', orgTypeEl.value);
+          if(orgEl && orgEl.value) qp0.set('organization', orgEl.value);
+          url = `${base}?${qp0.toString()}`;
+        }
+
+        if(!url){
+          assigned = [];
+          available = buildAvailableList(fullNavTree, assigned);
+          render();
+          return;
+        }
+
+        showOverlay('loadingOverlay', true);
+        let serverIds = [];
+        async function doFetch(u){
+          const r = await fetch(u, {headers:{'X-Requested-With':'fetch'}});
+          if(r.ok){
+            const data = await r.json();
+            return Array.isArray(data.assignments) ? data.assignments : [];
+          }
+          return [];
+        }
+        serverIds = await doFetch(url);
+        // Fallback: if role-based direct-only is empty, try effective=1 merged
+        if(serverIds.length === 0 && !selUsers.length && roleId){
+          const qp1 = new URLSearchParams();
+          qp1.set('role', roleId);
+          qp1.set('effective', '1');
+          if(orgTypeEl && orgTypeEl.value) qp1.set('org_type', orgTypeEl.value);
+          if(orgEl && orgEl.value) qp1.set('organization', orgEl.value);
+          const url1 = `{% url "api_get_sidebar_permissions" %}?${qp1.toString()}`;
+          serverIds = await doFetch(url1);
+        }
+        if(window && window.console){ try{ console.debug('[permissions] fetched', {user: selUsers[0]||null, role: roleId||null, count: serverIds.length}); }catch(_e){} }
+        const freshSet = new Set(serverIds);
+        function pickAssigned(items){
+          const out = [];
+          for(const it of items){
+            const ch = it.children && it.children.length ? pickAssigned(it.children) : [];
+            if(ch.length){ out.push({id: it.id, label: it.label, children: ch}); }
+            else if(freshSet.has(it.id)) { out.push({id: it.id, label: it.label}); }
+          }
+          return out;
+        }
+        assigned = pickAssigned(fullNavTree);
+        available = buildAvailableList(fullNavTree, assigned);
+        // update baseline for change indicator
+        assignedData = JSON.parse(JSON.stringify(assigned));
+        selectedAvailable.clear();
+        selectedAssigned.clear();
+        render();
+      }catch(e){
+        console.error('Failed to fetch assigned permissions', e);
+      } finally{
+        showOverlay('loadingOverlay', false);
+      }
+    }
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+    // --- Module suggestions under globalSearch ---
+    const moduleSuggest = $('#moduleSuggest');
+    function flattenModulesForSuggest(list){
+      const out = [];
+      for(const item of list||[]){
+        if(item.children && item.children.length){
+          out.push({ id: item.id, label: item.label, isParent: true });
+          for(const c of item.children){ out.push({ id: c.id, label: `${item.label} › ${c.label}`, parentId: item.id, isParent:false }); }
+        } else {
+          out.push({ id: item.id, label: item.label, isParent:false });
+        }
+      }
+      return out;
+    }
+    function renderModuleSuggestions(term){
+      if(!moduleSuggest) return;
+      const q = (term||'').toLowerCase();
+      const all = flattenModulesForSuggest(available.concat(assigned));
+      const matches = all.filter(m=>!q || (m.label||'').toLowerCase().includes(q)).slice(0, 50);
+      moduleSuggest.innerHTML = '';
+      if(matches.length===0){
+        moduleSuggest.innerHTML = '<div class="suggest-empty">No modules found</div>';
+      } else {
+        for(const m of matches){
+          const div = document.createElement('div');
+          div.className = 'suggest-item';
+          div.setAttribute('role','option');
+          div.dataset.id = m.id;
+          div.innerHTML = `<i class="fas ${m.isParent?'fa-folder':'fa-cube'}" style="color:#1e60b1"></i><span>${m.label}</span>`;
+          div.addEventListener('click', ()=>{
+            // Quick action: select the leaf if available, or expand/focus in lists
+            const leafEl = document.querySelector(`[data-id="${CSS.escape(m.id)}"]`);
+            if(leafEl){
+              leafEl.scrollIntoView({behavior:'smooth', block:'center'});
+              leafEl.classList.add('pulse-highlight');
+              setTimeout(()=> leafEl.classList.remove('pulse-highlight'), 1200);
+            } else {
+              showToast('Item not currently visible. Try expanding folders or clearing filters.', 'error');
+            }
+            moduleSuggest.style.display='none';
+            $('#globalSearch')?.setAttribute('aria-expanded','false');
+          });
+          moduleSuggest.appendChild(div);
+        }
+      }
+      moduleSuggest.style.display='block';
+      $('#globalSearch')?.setAttribute('aria-expanded','true');
+    }
 
     function showToast(message, type='success'){
       const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=message;
@@ -800,29 +983,47 @@ function mergeTrees(a = [], b = []){
   return out;
 }
 
-// 🔹 Helper: build available list preserving hierarchy, hiding only assigned items
-function buildAvailableList(originalData, assigned) {
-  // Collect assigned IDs (leaf + parent) for quick lookup
-  const assignedIds = new Set();
-  assigned.forEach(item => {
-    // We'll add parent id except for special groups we want to keep visible (e.g. dashboard for easy switching)
-    const keepParentVisible = ['dashboard'].includes(item.id);
-    if(!keepParentVisible) assignedIds.add(item.id);
-    if(item.children){ item.children.forEach(c=>assignedIds.add(c.id)); }
-  });
-
-  function process(item){
-    if(item.children && item.children.length){
-      const keepParentVisible = item.id === 'dashboard';
-      const remainingChildren = item.children.filter(c=>!assignedIds.has(c.id));
-      if(assignedIds.has(item.id) && !keepParentVisible) return null; // parent fully assigned and not whitelisted
-      if(remainingChildren.length === 0) return null; // nothing left to offer
-      return {id:item.id,label:item.label,children:remainingChildren};
+// 🔹 Helper: build available list preserving hierarchy until ALL descendants are assigned
+function buildAvailableList(originalData = [], assigned = []) {
+  // 1) Collect ONLY assigned leaf IDs (do not mark parents as assigned unless all leaves are)
+  const assignedLeafIds = new Set();
+  (function collectLeaves(list){
+    for(const item of (list || [])){
+      if(item && item.children && item.children.length){
+        collectLeaves(item.children);
+      } else if (item && item.id) {
+        assignedLeafIds.add(item.id);
+      }
     }
-    return assignedIds.has(item.id) ? null : {id:item.id,label:item.label};
+  })(assigned);
+
+  // 2) Clone original tree including ONLY nodes that still have at least one unassigned descendant
+  function cloneWithRemaining(item){
+    if(!item) return null;
+    const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+    if(hasChildren){
+      const keptChildren = [];
+      for(const child of item.children){
+        const clonedChild = cloneWithRemaining(child);
+        if(clonedChild) keptChildren.push(clonedChild);
+      }
+      if(keptChildren.length === 0) return null; // all descendants assigned → hide parent
+      return {
+        id: item.id,
+        label: item.label,
+        description: item.description || '',
+        children: keptChildren
+      };
+    }
+    // Leaf
+    return assignedLeafIds.has(item.id) ? null : {
+      id: item.id,
+      label: item.label,
+      description: item.description || ''
+    };
   }
 
-  return originalData.map(process).filter(Boolean);
+  return (originalData || []).map(cloneWithRemaining).filter(Boolean);
 }
 
 // Build a full tree so removed items reappear in Available
@@ -844,7 +1045,7 @@ let lastSavedLeafIds = null;
     const assignedEmpty =$('#assignedEmpty');
     const globalSearch  =$('#globalSearch');
   const userSelect=$('#userSelect');
-  const selectAllUsersBtn=$('#selectAllUsersBtn');
+  const selectAllUsersBtn=null; // removed
     const orgTypeSelect=$('#orgTypeSelect');
   const orgSelect=$('#orgSelect');
     const orgRoleSelect=$('#orgRoleSelect');
@@ -1315,22 +1516,26 @@ document.getElementById('permissionsForm').addEventListener('submit', e => {
     globalSearch.addEventListener('input',()=> setTimeout(render,120));
     $('#clearSearchBtn')?.addEventListener('click',()=>{ globalSearch.value=''; render(); });
 
-  userSelect.addEventListener('change',()=>{
-    const ids=Array.from(userSelect.selectedOptions).map(o=>o.value).filter(Boolean);
-    if(ids.length===1) reloadWithFilters();
-  });
-  selectAllUsersBtn?.addEventListener('click',()=>{
-    Array.from(userSelect.options).forEach(o=>o.selected=true);
-  });
+  userSelect.addEventListener('change',()=>{ fetchAssignedForCurrentSelection(); });
+  // removed: selectAllUsersBtn handler
   if(orgTypeSelect) orgTypeSelect.addEventListener('change', async ()=>{
     if(!orgTypeSelect.value){ if(orgRoleSelect) orgRoleSelect.value=''; if(orgSelect) orgSelect.value=''; }
-    // Populate orgs only if the dropdown exists; always refresh roles
     if(orgSelect) await populateOrganizations({triggerChange:false});
     await populateRoles();
-    reloadWithFilters();
+    fetchAssignedForCurrentSelection();
   });
-  if(orgSelect) orgSelect.addEventListener('change',()=>{ populateRoles().then(()=> reloadWithFilters()); });
-  if(orgRoleSelect) orgRoleSelect.addEventListener('change',()=> reloadWithFilters());
+  if(orgSelect) orgSelect.addEventListener('change',()=>{
+    // Clearing user selection when org changes prevents stale user-based fetches
+    if($('#userSelect')) Array.from($('#userSelect').options).forEach(o=>o.selected=false);
+    if($('#userFilter')) $('#userFilter').value='';
+    populateRoles().then(()=> fetchAssignedForCurrentSelection());
+  });
+  if(orgRoleSelect) orgRoleSelect.addEventListener('change',()=>{
+    // Role-based view takes precedence when no specific user is selected
+    if($('#userSelect')) Array.from($('#userSelect').options).forEach(o=>o.selected=false);
+    if($('#userFilter')) $('#userFilter').value='';
+    fetchAssignedForCurrentSelection();
+  });
 
   // Removed duplicate bottom save button.
 

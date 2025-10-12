@@ -13,8 +13,10 @@ from .models import (
     CDLRequest,
     CertificateBatch,
     CertificateEntry,
+    Organization,
     SDGGoal,
     SidebarModule,
+    StudentAchievement,
     log_impersonation_start,
 )
 
@@ -68,6 +70,21 @@ admin.site.register(CDLCommunicationThread)
 admin.site.register(CDLMessage)
 admin.site.register(CertificateBatch)
 admin.site.register(CertificateEntry)
+
+
+@admin.register(Organization)
+class OrganizationAdmin(admin.ModelAdmin):
+    list_display = ("name", "org_type", "is_active")
+    list_filter = ("org_type", "is_active")
+    search_fields = ("name",)
+
+
+@admin.register(StudentAchievement)
+class StudentAchievementAdmin(admin.ModelAdmin):
+    list_display = ("title", "user", "date_achieved", "created_at")
+    search_fields = ("title", "description", "user__username", "user__email")
+    list_filter = ("date_achieved", "created_at")
+    autocomplete_fields = ("user",)
 
 
 @admin.register(SidebarModule)

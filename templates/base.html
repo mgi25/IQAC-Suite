@@ -269,19 +269,22 @@
 
       <!-- User Management - Expandable (Admin Only) -->
   {% if unrestricted_nav or 'user_management' in allowed_nav_items %}
-<div class="nav-section {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}expanded{% endif %}">
+  <div class="nav-section {% if 'users' in request.path or 'user-roles' in request.path or 'join-requests' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' or request.resolver_match.namespace == 'usermanagement' and request.resolver_match.url_name == 'join_requests' %}expanded{% endif %}">
   <div class="nav-section-header">
     <i class="fas fa-users nav-icon"></i>
     <span class="nav-text">User Management</span>
-    <i class="fas fa-chevron-right expand-icon {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}rotated{% endif %}"></i>
+      <i class="fas fa-chevron-right expand-icon {% if 'users' in request.path or 'user-roles' in request.path or 'join-requests' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' or request.resolver_match.namespace == 'usermanagement' and request.resolver_match.url_name == 'join_requests' %}rotated{% endif %}"></i>
   </div>
-  <div class="nav-submenu {% if 'users' in request.path or 'user-roles' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' %}open{% endif %}">
+    <div class="nav-submenu {% if 'users' in request.path or 'user-roles' in request.path or 'join-requests' in request.path or request.resolver_match.url_name == 'admin_user_management' or request.resolver_match.url_name == 'admin_role_management' or request.resolver_match.url_name == 'admin_user_panel' or request.resolver_match.namespace == 'usermanagement' and request.resolver_match.url_name == 'join_requests' %}open{% endif %}">
     <a href="/core-admin/users/" class="nav-sublink {% if request.resolver_match.url_name == 'admin_user_management' %}active{% endif %}">
       <i class="fas fa-user"></i> Manage Users
     </a>
     <a href="/core-admin/user-roles/" class="nav-sublink {% if request.resolver_match.url_name == 'admin_role_management' %}active{% endif %}">
       <i class="fas fa-tags"></i> Add Roles
     </a>
+      <a href="{% url 'usermanagement:join_requests' %}" class="nav-sublink {% if request.resolver_match.namespace == 'usermanagement' and request.resolver_match.url_name == 'join_requests' %}active{% endif %}">
+        <i class="fas fa-clipboard-list"></i> Join Requests
+      </a>
   </div>
 </div>
 {% endif %}
@@ -368,6 +371,13 @@
   <!-- ZONE 3: MAIN VIEWSCREEN -->
   <div class="main-viewscreen main-content">
     <div class="viewscreen-content">
+      <!-- Global overlay (hidden by default). Use window.AppOverlay.show('Loading…') / hide() -->
+      <div id="appOverlay" class="app-overlay hidden" aria-live="polite" aria-hidden="true" role="status">
+        <div class="overlay-card">
+          <div class="spinner" aria-hidden="true"></div>
+          <div id="appOverlayMsg" class="message" data-default="Loading…">Loading…</div>
+        </div>
+      </div>
       <script>
         // Expose a helper for future live-updates of the sidebar
         window.refreshSidebar = async function(){
@@ -375,6 +385,27 @@
             const r = await fetch('{% url "api_my_sidebar" %}', {headers:{'X-Requested-With':'fetch'}});
             if(r.ok){ location.reload(); }
           }catch(e){}
+        };
+        // App-wide overlay controller
+        window.AppOverlay = {
+          show(msg, opts){
+            const el = document.getElementById('appOverlay');
+            const m = document.getElementById('appOverlayMsg');
+            if(!el||!m) return;
+            m.textContent = msg || m.dataset.default || 'Loading…';
+            if(opts && opts.mode === 'saving') el.classList.add('saving'); else el.classList.remove('saving');
+            el.classList.remove('hidden'); el.setAttribute('aria-hidden','false');
+            document.body.classList.add('overlay-locked');
+          },
+          hide(){
+            const el = document.getElementById('appOverlay');
+            const m = document.getElementById('appOverlayMsg');
+            if(!el||!m) return;
+            el.classList.add('hidden'); el.setAttribute('aria-hidden','true');
+            m.textContent = m.dataset.default || 'Loading…';
+            document.body.classList.remove('overlay-locked');
+          },
+          saving(msg){ this.show(msg || 'Saving…', {mode:'saving'}); }
         };
       </script>
       {% block content %}
@@ -471,6 +502,30 @@
         document.body.classList.toggle('sidebar-collapsed');
       });
 
+      // Enforce single active dashboard link: clicking one dashboard deactivates others
+      (function(){
+        const isDash = (a)=>/dashboard/i.test(a.textContent||'') || /dashboard/.test(a.getAttribute('href')||'');
+        const links = Array.from(document.querySelectorAll('.control-navigation .nav-link'));
+        links.forEach(a=>{
+          if(!isDash(a)) return;
+          a.addEventListener('click', function(){
+            links.forEach(x=>{ if(x!==a && isDash(x)) x.classList.remove('active'); });
+            a.classList.add('active');
+            try{ window.localStorage.setItem('iqac:lastDashboard', a.getAttribute('href')||''); }catch(_e){}
+            // Show loading overlay briefly to indicate navigation
+            try{ if(window.AppOverlay) AppOverlay.show(); setTimeout(()=>AppOverlay.hide(), 1500); }catch(_e){}
+          });
+        });
+        // Restore last chosen dashboard highlight on load (if on the dashboard area)
+        try{
+          const last = window.localStorage.getItem('iqac:lastDashboard');
+          if(last){
+            const match = links.find(a=>isDash(a) && (a.getAttribute('href')===last));
+            if(match) links.forEach(x=>x.classList.toggle('active', x===match));
+          }
+        }catch(_e){}
+      })();
+
       // Close dropdowns when clicking outside
       document.addEventListener('click', function(e) {
         const profileDropdown = document.querySelector('.profile-dropdown');
@@ -483,11 +538,12 @@
         }
       });
 
-      // Back/forward navigation handling when impersonating: prompt the admin
-      // to stop impersonation rather than unintentionally logging out or
-      // creating session confusion. We listen for the popstate event which
-      // fires on back/forward navigation and show a confirmation.
-      if ({{ request.is_impersonating|yesno:'true,false' }}) {
+  // Back/forward navigation handling when impersonating: prompt the admin
+  // to stop impersonation rather than unintentionally logging out or
+  // creating session confusion. We listen for the popstate event which
+  // fires on back/forward navigation and show a confirmation.
+  const __IS_IMPERSONATING__ = ('{% if request.is_impersonating %}1{% else %}0{% endif %}' === '1');
+  if (__IS_IMPERSONATING__) {
         window.addEventListener('popstate', function(e){
           // Show a browser-native confirm for simplicity and reliability.
           var stop = confirm('You are currently impersonating a user. Do you want to stop impersonation and return to your admin account?');

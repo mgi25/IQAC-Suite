@@ -13,6 +13,10 @@ urlpatterns = [
         "emt/", include(("emt.urls", "emt"), namespace="emt_legacy")
     ),  # backward compatibility
     path("transcript/", include("transcript.urls")),  # transcript module
+    path(
+        "usermanagement/",
+        include(("usermanagement.urls", "usermanagement"), namespace="usermanagement"),
+    ),
 ]
 
 # This block enables the Debug Toolbar and media file serving in development.

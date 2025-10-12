@@ -21,7 +21,7 @@
     </div>
     <div class="nav-right">
       <span class="user-badge faculty-badge">
-        <i class="fas fa-chalkboard-user"></i>
+        <i class="fas fa-chalkboard-teacher"></i>
         Faculty
       </span>
     </div>
@@ -31,54 +31,18 @@
   <div class="profile-header-section faculty-header">
     <div class="profile-header-container">
       <div class="profile-left-section">
-        <div class="profile-avatar-section">
-          <div class="profile-avatar-large faculty-avatar">
-            <div class="avatar-placeholder">{{ user.get_full_name|default:user.username|slice:":1"|upper }}</div>
-          </div>
-          <button class="avatar-edit-btn">
-            <i class="fas fa-camera"></i>
-          </button>
-        </div>
         <div class="profile-basic-info">
           <h1 class="profile-title">{{ user.get_full_name|default:user.username }}</h1>
-          <p class="profile-subtitle">{{ user.email }}</p>
-          {% if user.profile.role %}
-          <p class="profile-role">
-            <i class="fas fa-user-tie"></i>
-            {{ user.profile.get_role_display }}
+          <p class="profile-subtitle">{{ user.email|default:"Email not set" }}</p>
+          <p class="profile-reg-number">
+            <i class="fas fa-id-badge"></i>
+            <span>Role:</span>
+            <span>{{ user.profile.get_role_display|default:"Faculty" }}</span>
           </p>
-          {% endif %}
-          <div class="profile-completion-section">
-            <div class="completion-label">Profile Completion</div>
-            <div class="completion-bar-container">
-              <div class="completion-bar">
-                <div class="completion-fill" style="width: {{ profile_completion_percentage }}%"></div>
-              </div>
-              <span class="completion-percentage">{{ profile_completion_percentage }}%</span>
-            </div>
-          </div>
         </div>
       </div>
       <div class="profile-stats-section">
         <div class="profile-stats-grid faculty-stats">
-          <div class="stat-card">
-            <div class="stat-icon">
-              <i class="fas fa-user-graduate"></i>
-            </div>
-            <div class="stat-content">
-              <div class="stat-number">{{ students_count|default:"0" }}</div>
-              <div class="stat-label">STUDENTS</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">
-              <i class="fas fa-chalkboard"></i>
-            </div>
-            <div class="stat-content">
-              <div class="stat-number">{{ classes_count|default:"0" }}</div>
-              <div class="stat-label">CLASSES</div>
-            </div>
-          </div>
           <div class="stat-card">
             <div class="stat-icon">
               <i class="fas fa-calendar-check"></i>
@@ -90,11 +54,11 @@
           </div>
           <div class="stat-card">
             <div class="stat-icon">
-              <i class="fas fa-clock"></i>
+              <i class="fas fa-chalkboard"></i>
             </div>
             <div class="stat-content">
-              <div class="stat-number">{{ years_active|default:"0" }}</div>
-              <div class="stat-label">YEARS ACTIVE</div>
+              <div class="stat-number">{{ classes_count|default:"0" }}</div>
+              <div class="stat-label">CLASSES</div>
             </div>
           </div>
         </div>
@@ -401,7 +365,7 @@
               <h2>Events Organized</h2>
             </div>
             <div class="header-actions">
-              <a href="{% url 'emt:event_proposal_form' %}" class="btn btn-primary">
+              <a href="{% url 'emt:start_proposal' %}" class="btn btn-primary">
                 <i class="fas fa-plus"></i>
                 New Event
               </a>
@@ -465,7 +429,7 @@
                 <div class="empty-content">
                   <h3>No Events Organized</h3>
                   <p>You haven't organized any events yet. Start by creating your first event proposal and managing the event lifecycle.</p>
-                  <a href="{% url 'emt:event_proposal_form' %}" class="btn btn-primary btn-lg">
+                  <a href="{% url 'emt:start_proposal' %}" class="btn btn-primary btn-lg">
                     <i class="fas fa-plus"></i>
                     <span>Create Your First Event</span>
                   </a>
@@ -479,8 +443,8 @@
 
     <!-- Organizations Tab -->
     <div id="organizations" class="tab-content-panel">
-      <div class="content-row">
-        <div class="content-card full-width-card">
+      <div class="content-row organizations-layout">
+        <div class="content-card full-width-card organization-panel">
           <div class="card-header">
             <div class="header-left">
               <div class="header-icon">
@@ -488,57 +452,102 @@
               </div>
               <h2>My Organizations</h2>
             </div>
+            <button class="btn btn-primary" type="button" onclick="joinOrganization()">
+              <i class="fas fa-plus"></i>
+              <span>Join Organization</span>
+            </button>
           </div>
-          <div class="card-body full-height">
+          <div class="card-body">
             {% if user_organizations %}
-              <div class="organizations-grid-expanded">
+              <div class="organization-list" id="organization-list">
                 {% for org in user_organizations %}
-                <div class="organization-card-large">
-                  <div class="org-header">
-                    <div class="org-icon">
-                      <i class="fas fa-building"></i>
-                    </div>
-                    <div class="org-info">
-                      <h4>{{ org.name }}</h4>
-                      <div class="org-badge">{{ org.org_type.name }}</div>
-                    </div>
-                    <div class="org-actions">
-                      <button class="action-btn" onclick="viewOrganization({{ org.id }})">
-                        <i class="fas fa-eye"></i>
-                      </button>
-                      <button class="action-btn" onclick="manageOrganization({{ org.id }})">
-                        <i class="fas fa-cog"></i>
-                      </button>
+                <div class="organization-list-item" data-org-id="{{ org.id }}" data-can-leave="{{ org.can_leave|yesno:'true,false' }}">
+                  <div class="org-summary">
+                    <div class="org-name">{{ org.name }}</div>
+                    <div class="org-meta">
+                      {{ org.org_type_display }}{% if org.membership_role_label %} · {{ org.membership_role_label }}{% endif %}
                     </div>
                   </div>
-                  <div class="org-details">
-                    <div class="detail-item">
-                      <i class="fas fa-user-tie"></i>
-                      <span>Faculty Member</span>
-                    </div>
-                    <div class="detail-item">
-                      <i class="fas fa-users"></i>
-                      <span>{{ org.role_assignments.count }} Members</span>
-                    </div>
+                  <div class="org-extra">
+                    {% if org.joined_date %}<span class="org-pill">Joined {{ org.joined_date|date:"M Y" }}</span>{% endif %}
+                    {% if org.membership_academic_year %}<span class="org-pill">{{ org.membership_academic_year }}</span>{% endif %}
+                    {% if not org.can_leave %}<span class="org-pill org-pill-muted">Admin managed</span>{% endif %}
+                  </div>
+                  <div class="org-actions">
+                    <button class="btn btn-icon" type="button" onclick="viewOrganization({{ org.id }})" title="View organization">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-icon" type="button" onclick="manageOrganization({{ org.id }})" title="Manage organization">
+                      <i class="fas fa-cog"></i>
+                    </button>
+                    {% if org.can_leave %}
+                    <button class="btn btn-icon" type="button" data-action="leave" title="Request to leave" onclick="leaveOrganization({{ org.id }})">
+                      <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                    {% else %}
+                    <button class="btn btn-icon" type="button" disabled title="Managed by administrator">
+                      <i class="fas fa-lock"></i>
+                    </button>
+                    {% endif %}
                   </div>
                 </div>
                 {% endfor %}
               </div>
             {% else %}
-              <div class="empty-state-expanded">
-                <div class="empty-icon">
-                  <i class="fas fa-building"></i>
-                </div>
-                <div class="empty-content">
-                  <h3>No Organizations</h3>
-                  <p>You are not currently associated with any organizations. Contact your administrator to be added to relevant departments or committees.</p>
-                  <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg">
-                    <i class="fas fa-arrow-left"></i>
-                    <span>Back to Dashboard</span>
-                  </a>
-                </div>
+              <div class="empty-state-condensed">
+                <i class="fas fa-building"></i>
+                <p>You are not part of any organizations yet.</p>
+                <button class="btn btn-primary btn-sm" type="button" onclick="joinOrganization()">
+                  <i class="fas fa-plus"></i>
+                  <span>Join Your First Organization</span>
+                </button>
               </div>
             {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="content-row organizations-layout">
+        <div class="content-card full-width-card">
+          <div class="card-header">
+            <div class="header-left">
+              <div class="header-icon">
+                <i class="fas fa-clipboard-list"></i>
+              </div>
+              <h2>Membership Requests</h2>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="join-requests-container">
+              <div id="join-requests-list" class="join-requests-list"{% if not join_requests %} hidden{% endif %}>
+                {% for request in join_requests %}
+                <div class="join-request-row" data-request-id="{{ request.id }}" data-organization-id="{{ request.organization_id }}" data-request-type="{{ request.request_type }}">
+                  <div class="join-request-main">
+                    <span class="join-request-name">{{ request.organization.name }}</span>
+                    <span class="join-request-meta">{{ request.get_request_type_display }} · {{ request.requested_on|date:"d MMM YYYY" }}</span>
+                  </div>
+                  <div class="join-request-status">
+                    {% if request.status == 'Pending' and request.is_seen %}
+                      <span class="status-pill status-pill-seen">Seen</span>
+                    {% else %}
+                      <span class="status-pill status-pill-{{ request.status|lower }}">{{ request.status }}</span>
+                    {% endif %}
+                  </div>
+                  {% if request.response_message %}
+                  <div class="join-request-response">{{ request.response_message }}</div>
+                  {% endif %}
+                </div>
+                {% endfor %}
+              </div>
+              <div id="join-requests-empty" class="empty-state-condensed"{% if join_requests %} hidden{% endif %}>
+                <i class="fas fa-inbox"></i>
+                <p>No membership requests yet.</p>
+                <button class="btn btn-secondary btn-sm" type="button" onclick="joinOrganization()">
+                  <i class="fas fa-plus"></i>
+                  <span>Submit Request</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -546,6 +555,8 @@
   </div>
 </div>
 
+{{ join_requests_payload|json_script:"join-requests-data" }}
 <script src="{% static 'core/js/profile.js' %}"></script>
+<script src="{% static 'core/js/profile_organizations.js' %}"></script>
 <script src="{% static 'core/js/faculty_profile.js' %}"></script>
 {% endblock %}
