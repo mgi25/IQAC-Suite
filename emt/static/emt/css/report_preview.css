@@ -14,10 +14,10 @@
     min-width: 260px;
     max-width: 280px;
     padding: 1.6rem;
-    background: linear-gradient(180deg, rgba(99, 102, 241, 0.98), rgba(59, 130, 246, 0.92));
+    background: linear-gradient(180deg, var(--primary-blue, #264487) 0%, var(--primary-blue-dark, #1a2f5f) 100%);
     border-radius: 22px;
     color: #f8fbff;
-    box-shadow: 0 30px 45px rgba(79, 70, 229, 0.28);
+    box-shadow: 0 30px 45px rgba(26, 47, 95, 0.28);
     border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
@@ -103,7 +103,7 @@
 }
 
 .sidebar-link.active .step-number {
-    background: linear-gradient(135deg, #60a5fa, #4338ca);
+    background: linear-gradient(135deg, var(--primary-blue, #264487), var(--primary-blue-dark, #1a2f5f));
 }
 
 .sidebar-actions {
@@ -446,15 +446,16 @@
 }
 
 .analysis-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 1rem;
 }
 
 .analysis-card {
+    flex: 1 1 260px;
     border-radius: 16px;
     border: 1px solid rgba(226, 232, 240, 0.9);
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0));
+    background: linear-gradient(135deg, rgba(38, 68, 135, 0.12), rgba(38, 68, 135, 0));
     padding: 1.15rem;
 }
 
