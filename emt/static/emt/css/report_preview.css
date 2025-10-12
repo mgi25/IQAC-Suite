@@ -385,23 +385,6 @@
     border: 1px solid rgba(203, 213, 225, 0.8);
 }
 
-.detail-row--wide {
-    grid-column: 1 / -1;
-    align-items: flex-start;
-}
-
-@media (min-width: 768px) {
-    .detail-row--wide {
-        grid-template-columns: minmax(200px, 0.4fr) minmax(0, 1fr);
-    }
-}
-
-@media (min-width: 1024px) {
-    .detail-row--wide {
-        grid-template-columns: minmax(220px, 0.35fr) minmax(0, 1fr);
-    }
-}
-
 .detail-row dt {
     font-size: 0.82rem;
     text-transform: uppercase;
