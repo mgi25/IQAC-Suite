@@ -3563,6 +3563,54 @@ def preview_event_report(request, proposal_id):
 
         return str(value)
 
+    non_text_field_classes = (
+        forms.IntegerField,
+        forms.DecimalField,
+        forms.FloatField,
+        forms.BooleanField,
+        forms.DateField,
+        forms.DateTimeField,
+        forms.TimeField,
+        forms.FileField,
+    )
+
+    def _is_textual_form_field(field: forms.Field) -> bool:
+        """Return True for user-facing text/textarea style inputs."""
+
+        return not isinstance(field, non_text_field_classes) and not field.widget.is_hidden
+
+    def _append_text_value(
+        store: list[tuple[str, str]],
+        label: str,
+        value,
+        *,
+        insert_at: int | None = None,
+    ) -> None:
+        """Append a value to the preview only when it represents textual input."""
+
+        if isinstance(value, str):
+            display_value = value.strip() or "—"
+        elif isinstance(value, (list, tuple, set)):
+            cleaned = [
+                str(item).strip()
+                for item in value
+                if isinstance(item, str) and str(item).strip()
+            ]
+            display_value = ", ".join(cleaned) if cleaned else "—"
+        elif value in (None, ""):
+            display_value = "—"
+        else:
+            return
+
+        if insert_at is None:
+            store.append((label, display_value))
+        else:
+            store.insert(insert_at, (label, display_value))
+
+    def _append_text_items(store: list[tuple[str, str]], items: list[tuple[str, object]]) -> None:
+        for label, raw in items:
+            _append_text_value(store, label, raw)
+
     # Update proposal snapshot values with any edits coming from the report form so
     # that the preview reflects the latest user-provided data instead of the
     # original submission only.
@@ -3616,6 +3664,8 @@ def preview_event_report(request, proposal_id):
     for name, field in proposal_form.fields.items():
         if name in excluded_proposal_fields:
             continue
+        if not _is_textual_form_field(field):
+            continue
         bound_field = proposal_form[name]
         raw_value = bound_field.value()
         field_def = bound_field.field
@@ -3652,25 +3702,27 @@ def preview_event_report(request, proposal_id):
                 obj = getattr(proposal, name)
             display = str(obj) if obj else "—"
         else:
-            display = raw_value or "—"
-        proposal_fields.append((bound_field.label, display))
+            display = _format_display(raw_value)
+        _append_text_value(proposal_fields, bound_field.label, display)
 
     # Add related proposal data not covered by EventProposalForm
     need = getattr(proposal, "need_analysis", None)
-    proposal_fields.append(
-        (
-            'Rationale / "Why is this event necessary?"',
-            getattr(need, "content", "") or "—",
-        )
+    _append_text_value(
+        proposal_fields,
+        'Rationale / "Why is this event necessary?"',
+        getattr(need, "content", ""),
     )
     objectives = getattr(proposal, "objectives", None)
-    proposal_fields.append(("Objectives", getattr(objectives, "content", "") or "—"))
+    _append_text_value(
+        proposal_fields,
+        "Objectives",
+        getattr(objectives, "content", ""),
+    )
     outcomes = getattr(proposal, "expected_outcomes", None)
-    proposal_fields.append(
-        (
-            "Expected Learning Outcomes",
-            getattr(outcomes, "content", "") or "—",
-        )
+    _append_text_value(
+        proposal_fields,
+        "Expected Learning Outcomes",
+        getattr(outcomes, "content", ""),
     )
 
     flow = getattr(proposal, "tentative_flow", None)
@@ -3681,62 +3733,53 @@ def preview_event_report(request, proposal_id):
                 dt_str, activity = line.split("||", 1)
             except ValueError:
                 dt_str, activity = line, ""
-            proposal_fields.append(
-                (f"Schedule Item {idx} - Date & Time", dt_str.strip())
+            _append_text_value(
+                proposal_fields,
+                f"Schedule Item {idx} - Date & Time",
+                dt_str.strip(),
             )
-            proposal_fields.append(
-                (f"Schedule Item {idx} - Activity", activity.strip())
+            _append_text_value(
+                proposal_fields,
+                f"Schedule Item {idx} - Activity",
+                activity.strip(),
             )
 
     # Include planned activities captured as structured rows on the proposal
     planned_activities = list(proposal.activities.all().order_by("date", "id"))
     for idx, act in enumerate(planned_activities, 1):
-        proposal_fields.append((f"Planned Activity {idx} - Name", act.name or "—"))
-        proposal_fields.append(
-            (f"Planned Activity {idx} - Date", getattr(act, "date", "") or "—")
+        _append_text_value(
+            proposal_fields, f"Planned Activity {idx} - Name", act.name or ""
         )
 
     for idx, speaker in enumerate(proposal.speakers.all(), 1):
-        proposal_fields.extend(
+        _append_text_items(
+            proposal_fields,
             [
-                (f"Speaker {idx}: Full Name", speaker.full_name or "—"),
-                (f"Speaker {idx}: Designation", speaker.designation or "—"),
-                (f"Speaker {idx}: Organization", speaker.affiliation or "—"),
-                (f"Speaker {idx}: Email", speaker.contact_email or "—"),
-                (f"Speaker {idx}: Contact Number", speaker.contact_number or "—"),
+                (f"Speaker {idx}: Full Name", speaker.full_name or ""),
+                (f"Speaker {idx}: Designation", speaker.designation or ""),
+                (f"Speaker {idx}: Organization", speaker.affiliation or ""),
+                (f"Speaker {idx}: Email", speaker.contact_email or ""),
+                (f"Speaker {idx}: Contact Number", speaker.contact_number or ""),
                 (
                     f"Speaker {idx}: LinkedIn Profile",
-                    speaker.linkedin_url or "—",
+                    speaker.linkedin_url or "",
                 ),
-                (
-                    f"Speaker {idx}: Photo",
-                    speaker.photo.url if speaker.photo else "—",
-                ),
-                (f"Speaker {idx}: Bio", speaker.detailed_profile or "—"),
-            ]
+                (f"Speaker {idx}: Bio", speaker.detailed_profile or ""),
+            ],
         )
 
     for idx, expense in enumerate(proposal.expense_details.all(), 1):
-        proposal_fields.extend(
-            [
-                (f"Expense Item {idx}: SL No", getattr(expense, "sl_no", "") or "—"),
-                (f"Expense Item {idx}: Particulars", expense.particulars or "—"),
-                (f"Expense Item {idx}: Amount", expense.amount or "—"),
-            ]
+        _append_text_value(
+            proposal_fields,
+            f"Expense Item {idx}: Particulars",
+            expense.particulars or "",
         )
 
     for idx, income in enumerate(proposal.income_details.all(), 1):
-        proposal_fields.extend(
-            [
-                (f"Income Item {idx}: Item", income.sl_no or "—"),
-                (f"Income Item {idx}: Particulars", income.particulars or "—"),
-                (
-                    f"Income Item {idx}: No. of Participants",
-                    income.participants or "—",
-                ),
-                (f"Income Item {idx}: Rate", income.rate or "—"),
-                (f"Income Item {idx}: Amount", income.amount or "—"),
-            ]
+        _append_text_value(
+            proposal_fields,
+            f"Income Item {idx}: Particulars",
+            income.particulars or "",
         )
 
     support = getattr(proposal, "cdl_support", None)
@@ -3746,9 +3789,19 @@ def preview_event_report(request, proposal_id):
         )
 
         def _append_cdl(label, value, *, is_date=False):
+            if isinstance(value, (list, tuple, set)):
+                cleaned = [
+                    str(item).strip()
+                    for item in value
+                    if isinstance(item, str) and str(item).strip()
+                ]
+                joined = ", ".join(cleaned) if cleaned else ""
+                _append_text_value(proposal_fields, label, joined)
+                return
             if is_date:
-                value = _display_date(value)
-            proposal_fields.append((label, _format_display(value)))
+                # Date inputs are not treated as text fields for the preview.
+                return
+            _append_text_value(proposal_fields, label, value or "")
 
         if support.poster_required:
             _append_cdl("Poster Choice", support.get_poster_choice_display())
@@ -3795,21 +3848,15 @@ def preview_event_report(request, proposal_id):
     manual_fields_count = len(manual_report_fields)
 
     for label, raw in manual_report_fields:
-        report_fields.append((label, _format_display(raw)))
+        _append_text_value(report_fields, label, _format_display(raw))
 
     for name, field in form.fields.items():
-        values = post_data.getlist(name)
         if name == "report_signed_date":
-            display_value = None
-            for raw in values:
-                if isinstance(raw, str):
-                    raw = raw.strip()
-                if raw:
-                    display_value = _display_date(raw)
-                    break
-            report_fields.append((field.label, _format_display(display_value)))
+            continue
+        if not _is_textual_form_field(field):
             continue
 
+        values = post_data.getlist(name)
         cleaned_values = []
         for raw in values:
             if isinstance(raw, str):
@@ -3818,29 +3865,12 @@ def preview_event_report(request, proposal_id):
                 continue
             cleaned_values.append(raw)
 
-        fallback_value = None
         if not cleaned_values:
-            if name == "num_participants":
-                fallback_value = total_count
-            elif name == "num_student_volunteers":
-                fallback_value = volunteers_count
-            elif name == "num_student_participants":
-                fallback_value = student_count
-            elif name == "num_faculty_participants":
-                fallback_value = faculty_count
-            elif name == "num_external_participants":
-                fallback_value = external_count
-
-        if not cleaned_values:
-            if fallback_value in (None, ""):
-                display = "—"
-            else:
-                display = _format_display(fallback_value)
+            _append_text_value(report_fields, field.label, "")
         elif len(cleaned_values) == 1:
-            display = _format_display(cleaned_values[0])
+            _append_text_value(report_fields, field.label, cleaned_values[0])
         else:
-            display = _format_display(cleaned_values)
-        report_fields.append((field.label, display))
+            _append_text_value(report_fields, field.label, cleaned_values)
 
     # Include dynamic activities submitted with the report
     import re as _re
@@ -3853,14 +3883,9 @@ def preview_event_report(request, proposal_id):
         a_name = post_data.get(f"activity_name_{idx}")
         a_date = post_data.get(f"activity_date_{idx}")
         if a_name or a_date:
-            report_fields.append((f"Activity {idx} - Name", a_name or "—"))
-            report_fields.append((f"Activity {idx} - Date", a_date or "—"))
-
-    num_activities = post_data.get("num_activities")
-    if num_activities:
-        report_fields.append(
-            ("Number of Activities Conducted", _format_display(num_activities))
-        )
+            _append_text_value(
+                report_fields, f"Activity {idx} - Name", (a_name or "").strip()
+            )
 
     # Include dynamic organizing committee details captured on the participants section
     committee_names = post_data.getlist("committee_member_names[]")
@@ -3890,16 +3915,17 @@ def preview_event_report(request, proposal_id):
             continue
 
         label_prefix = f"Committee Member {idx + 1}"
-        report_fields.extend(
+        _append_text_items(
+            report_fields,
             [
-                (f"{label_prefix} - Name", _format_display(name)),
-                (f"{label_prefix} - Role", _format_display(role)),
+                (f"{label_prefix} - Name", name),
+                (f"{label_prefix} - Role", role),
                 (
                     f"{label_prefix} - Department/Organization",
-                    _format_display(dept),
+                    dept,
                 ),
-                (f"{label_prefix} - Contact", _format_display(contact)),
-            ]
+                (f"{label_prefix} - Contact", contact),
+            ],
         )
 
     # Include per-speaker session details captured in the participants section
@@ -3929,33 +3955,26 @@ def preview_event_report(request, proposal_id):
             continue
 
         label_prefix = f"Speaker Session {idx + 1}"
-        display_values = []
 
         if speaker_id:
             speaker_obj = speaker_lookup.get(str(speaker_id))
             speaker_name = getattr(speaker_obj, "full_name", None) if speaker_obj else None
-            display_values.append(
-                (
-                    f"{label_prefix} - Speaker",
-                    _format_display(speaker_name or speaker_id),
-                )
+            _append_text_value(
+                report_fields,
+                f"{label_prefix} - Speaker",
+                speaker_name or speaker_id,
             )
 
-        display_values.extend(
-            [
-                (f"{label_prefix} - Topic", _format_display(topic)),
-                (
-                    f"{label_prefix} - Duration (minutes)",
-                    _format_display(duration),
-                ),
-                (
-                    f"{label_prefix} - Feedback/Comments",
-                    _format_display(feedback),
-                ),
-            ]
+        _append_text_value(
+            report_fields,
+            f"{label_prefix} - Topic",
+            topic or "",
         )
-
-        report_fields.extend(display_values)
+        _append_text_value(
+            report_fields,
+            f"{label_prefix} - Feedback/Comments",
+            feedback or "",
+        )
 
     def _is_blank(value):
         if value is None:
