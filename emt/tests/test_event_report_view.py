@@ -674,6 +674,36 @@ console.log(JSON.stringify({
             expected_signed,
         )
 
+    def test_preview_initial_json_includes_participant_counts(self):
+        EventReport.objects.create(
+            proposal=self.proposal,
+            num_participants=55,
+            num_student_volunteers=12,
+        )
+
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Seminar",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+
+        payload = json.loads(response.context["initial_report_data"])
+        participants = payload.get("participants", {})
+
+        self.assertEqual(participants.get("attendees_count"), "55")
+        self.assertEqual(participants.get("participants_count"), "55")
+        self.assertEqual(participants.get("student_volunteers"), "12")
+        self.assertEqual(
+            participants.get("organising_committee", {}).get("student_volunteers_count"),
+            "12",
+        )
+
     def test_preview_shows_dynamic_committee_and_speaker_details(self):
         speaker = SpeakerProfile.objects.create(
             proposal=self.proposal,
