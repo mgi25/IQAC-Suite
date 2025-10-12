@@ -112,7 +112,12 @@ def _openrouter_chat(
 
 
 def chat(
-    messages, system=None, model=None, temperature=0.2, timeout=None, options=None
+    messages,
+    system=None,
+    model=None,
+    temperature=0.2,
+    timeout=None,
+    options=None,
 ):
     """
     Main entry point:

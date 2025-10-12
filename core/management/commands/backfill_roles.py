@@ -13,7 +13,11 @@ class Command(BaseCommand):
         for user in User.objects.all():
             email = (user.email or "").lower()
             domain = email.split("@")[-1]
-            role = "student" if domain.endswith("christuniversity.in") else "faculty"
+            role = (
+                "student"
+                if domain.endswith("christuniversity.in")
+                else "faculty"
+            )
 
             profile, _ = Profile.objects.get_or_create(user=user)
             if profile.role != role:

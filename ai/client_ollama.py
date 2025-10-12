@@ -23,11 +23,15 @@ def chat(
 ) -> str:
     """Send a chat completion request to the configured Ollama backend."""
     base = getattr(
-        settings, "OLLAMA_BASE", os.getenv("OLLAMA_BASE", "http://127.0.0.1:11434")
+        settings,
+        "OLLAMA_BASE",
+        os.getenv("OLLAMA_BASE", "http://127.0.0.1:11434"),
     )
     timeout = int(
         timeout
-        or getattr(settings, "AI_HTTP_TIMEOUT", os.getenv("AI_HTTP_TIMEOUT", 120))
+        or getattr(
+            settings, "AI_HTTP_TIMEOUT", os.getenv("AI_HTTP_TIMEOUT", 120)
+        )
     )
     model_name = model or getattr(
         settings, "OLLAMA_GEN_MODEL", os.getenv("OLLAMA_GEN_MODEL", "llama3")

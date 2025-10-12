@@ -1,5 +1,4 @@
 import json
-
 from django import forms
 from django.db.models import Q
 
@@ -30,7 +29,6 @@ class RoleAssignmentForm(forms.ModelForm):
         self.fields["organization"].queryset = Organization.objects.filter(
             org_filter
         ).order_by("name")
-        # Replace Django's default blank label ("---------") with a clearer prompt
         self.fields["organization"].empty_label = "Select Organization"
 
         # Include active roles plus the currently assigned role (even if inactive)
@@ -42,11 +40,9 @@ class RoleAssignmentForm(forms.ModelForm):
             .select_related("organization")
             .order_by("name")
         )
-        # Remove the implicit blank option from the role dropdown
         self.fields["role"].empty_label = "Select Role"
-        # Make fields not required at the form level so that forms marked
-        # for deletion do not fail per-field validation. The formset's
-        # clean() will enforce requiredness for non-deleted forms.
+
+        # Mark fields as not required for deletion-safe formsets
         self.fields["organization"].required = False
         self.fields["role"].required = False
 
@@ -79,7 +75,7 @@ class RegistrationForm(forms.Form):
             role_id = item.get("role")
             if not org_id or not role_id:
                 continue
-            # Ensure the IDs exist
+            # Ensure IDs exist
             if not Organization.objects.filter(id=org_id).exists():
                 continue
             if not OrganizationRole.objects.filter(id=role_id).exists():
@@ -95,7 +91,9 @@ class OrgSelectForm(forms.Form):
         label="Organization Type",
     )
     organization = forms.ModelChoiceField(
-        queryset=Organization.objects.none(), required=True, label="Organization"
+        queryset=Organization.objects.none(),
+        required=True,
+        label="Organization",
     )
     role = forms.ChoiceField(
         choices=(("student", "Student"), ("faculty", "Faculty")), required=True
@@ -181,7 +179,9 @@ class CDLRequestForm(forms.ModelForm):
             if poster_summary:
                 words = poster_summary.split()
                 if len(words) < 120 or len(words) > 180:
-                    self.add_error("poster_summary", "Summary must be around 150 words")
+                    self.add_error(
+                        "poster_summary", "Summary must be around 150 words"
+                    )
 
             if not poster_mode:
                 self.add_error("poster_mode", "Select a poster option")
@@ -191,10 +191,13 @@ class CDLRequestForm(forms.ModelForm):
                 self.add_error("certificate_mode", "Select certificate option")
             if (
                 need_certificate_cdl
-                and certificate_mode == CDLRequest.CertificateMode.CORRECT_EXISTING
+                and certificate_mode
+                == CDLRequest.CertificateMode.CORRECT_EXISTING
                 and not cleaned.get("certificate_design_link")
             ):
-                self.add_error("certificate_design_link", "Provide design link")
+                self.add_error(
+                    "certificate_design_link", "Provide design link"
+                )
 
         if (
             wants_cdl

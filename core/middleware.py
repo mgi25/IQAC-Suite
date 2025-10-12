@@ -139,7 +139,9 @@ class ActivityLogMiddleware:
                 and not request.path.startswith(settings.STATIC_URL)
                 and not request.path.startswith(settings.MEDIA_URL)
             ):
-                params = request.GET if request.method == "GET" else request.POST
+                params = (
+                    request.GET if request.method == "GET" else request.POST
+                )
                 params = {
                     k: v
                     for k, v in params.items()
@@ -173,7 +175,9 @@ class ActivityLogMiddleware:
                     if not obj and hasattr(response, "context_data"):
                         obj = response.context_data.get("object")
                     if obj:
-                        obj_title = getattr(obj, "title", getattr(obj, "name", None))
+                        obj_title = getattr(
+                            obj, "title", getattr(obj, "name", None)
+                        )
 
                     verb_map = {
                         "GET": "viewed",
@@ -187,7 +191,9 @@ class ActivityLogMiddleware:
                     if obj_title:
                         description += f' "{obj_title}"'
 
-                user_display = request.user.get_full_name() or request.user.username
+                user_display = (
+                    request.user.get_full_name() or request.user.username
+                )
                 description = f"{user_display} {description}".strip()
 
                 metadata = params or None
@@ -202,9 +208,13 @@ class ActivityLogMiddleware:
                     ip_address=ip,
                     metadata=metadata,
                 )
-        except Exception:  # pragma: no cover - logging should never break the request
+        except (
+            Exception
+        ):  # pragma: no cover - logging should never break the request
             logger.exception(
-                "Failed to log activity for %s %s", request.method, request.path
+                "Failed to log activity for %s %s",
+                request.method,
+                request.path,
             )
 
         return response

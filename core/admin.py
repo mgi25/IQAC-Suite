@@ -86,9 +86,17 @@ class StudentAchievementAdmin(admin.ModelAdmin):
     list_filter = ("date_achieved", "created_at")
     autocomplete_fields = ("user",)
 
+
 @admin.register(SidebarModule)
 class SidebarModuleAdmin(admin.ModelAdmin):
-    list_display = ("key", "label", "parent", "order", "is_active", "updated_at")
+    list_display = (
+        "key",
+        "label",
+        "parent",
+        "order",
+        "is_active",
+        "updated_at",
+    )
     list_filter = ("is_active", "parent")
     search_fields = ("key", "label")
     ordering = ("parent__id", "order", "key")

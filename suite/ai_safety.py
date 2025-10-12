@@ -21,7 +21,11 @@ def strip_unverifiable_phrases(text: str) -> str:
 
 def allowed_numbers_from_facts(facts: dict) -> set[str]:
     joined = " ".join(
-        str(v) if not isinstance(v, (list, dict, tuple, set)) else " ".join(map(str, v))
+        (
+            str(v)
+            if not isinstance(v, (list, dict, tuple, set))
+            else " ".join(map(str, v))
+        )
         for v in facts.values()
     )
     # capture bare numbers and percents present in facts

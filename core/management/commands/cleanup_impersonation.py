@@ -18,7 +18,9 @@ class Command(BaseCommand):
                 if impersonate_user_id:
                     # Check if impersonated user still exists
                     try:
-                        User.objects.get(id=impersonate_user_id, is_active=True)
+                        User.objects.get(
+                            id=impersonate_user_id, is_active=True
+                        )
                     except User.DoesNotExist:
                         session.delete()
                         cleaned_count += 1

@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.utils.formats import date_format
 from django.http import QueryDict
 
-from core.models import Organization, OrganizationType
+from core.models import Organization, OrganizationType, SDGGoal
 from core.signals import assign_role_on_login, create_or_update_user_profile
 from emt.forms import EventReportForm
 from emt.models import (AttendanceRow, CDLSupport, EventActivity, EventProposal,
@@ -505,6 +505,51 @@ console.log(JSON.stringify({
         self.assertContains(response, 'id="generate-ai-form"', html=False)
         self.assertContains(response, f'action="{submit_url}"', html=False)
         self.assertContains(response, 'name="generate_ai"', html=False)
+
+    def test_preview_shows_selected_sdg_goals(self):
+        goal = SDGGoal.objects.create(name="Quality Education")
+        self.proposal.sdg_goals.add(goal)
+
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Seminar",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"SDG {goal.id}: {goal.name}")
+
+        report_fields = response.context["report_fields"]
+        self.assertIn(
+            ("Aligned SDG Goals", f"SDG {goal.id}: {goal.name}"),
+            report_fields,
+        )
+
+    def test_preview_uses_posted_sdg_value_systems_mapping(self):
+        goal = SDGGoal.objects.create(name="Climate Action")
+
+        url = reverse("emt:preview_event_report", args=[self.proposal.id])
+        data = {
+            "actual_event_type": "Workshop",
+            "sdg_value_systems_mapping": f"SDG {goal.id}: {goal.name}",
+            "form-TOTAL_FORMS": "0",
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"SDG {goal.id}: {goal.name}")
+
+        report_fields = response.context["report_fields"]
+        self.assertIn(
+            ("Aligned SDG Goals", f"SDG {goal.id}: {goal.name}"),
+            report_fields,
+        )
 
     def test_preview_preserves_checked_and_unchecked_fields(self):
         url = reverse("emt:preview_event_report", args=[self.proposal.id])

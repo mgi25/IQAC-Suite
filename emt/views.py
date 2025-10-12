@@ -3585,7 +3585,19 @@ def preview_event_report(request, proposal_id):
                     objs = list(getattr(proposal, name).all())
             elif hasattr(proposal, name):
                 objs = list(getattr(proposal, name).all())
-            display = ", ".join(str(obj) for obj in objs) or "—"
+
+            if name == "sdg_goals" and hasattr(proposal, "sdg_goals"):
+                # Ensure we always show the selected SDGs with their numbers,
+                # even if the bound form data is missing due to caching.
+                objs = list(proposal.sdg_goals.all()) or objs
+
+            if name == "sdg_goals" and objs:
+                display = ", ".join(
+                    f"SDG {obj.id}: {obj.name}" if hasattr(obj, "id") else str(obj)
+                    for obj in objs
+                )
+            else:
+                display = ", ".join(str(obj) for obj in objs) or "—"
         elif isinstance(field_def, forms.ModelChoiceField):
             obj = None
             if raw_value:
@@ -3736,6 +3748,8 @@ def preview_event_report(request, proposal_id):
         ("Event End Date", _display_date(end_value or proposal.event_end_date)),
         ("Academic Year", proposal.academic_year),
     ]
+
+    manual_fields_count = len(manual_report_fields)
 
     for label, raw in manual_report_fields:
         report_fields.append((label, _format_display(raw)))
@@ -4080,16 +4094,29 @@ def preview_event_report(request, proposal_id):
             getattr(report, "contemporary_requirements", None),
         )
     )
-    mapping_value_systems_value = _text(
-        _first_value(
-            post_data.get("sdg_value_systems_mapping"),
-            getattr(report, "sdg_value_systems_mapping", None),
-        )
+    sdg_value_systems_raw = _first_value(
+        post_data.get("sdg_value_systems_mapping"),
+        getattr(report, "sdg_value_systems_mapping", None),
     )
+    mapping_value_systems_value = _text(sdg_value_systems_raw)
+
+    parsed_sdg_goals = []
+    if sdg_value_systems_raw:
+        parsed_sdg_goals = list(_parse_sdg_text(sdg_value_systems_raw))
+        parsed_sdg_goals.sort(key=attrgetter("id"))
+
+    if not parsed_sdg_goals:
+        parsed_sdg_goals = list(proposal.sdg_goals.all().order_by("id"))
+
     sdg_goal_numbers = [
         f"SDG {goal.id}: {goal.name}"
-        for goal in proposal.sdg_goals.all().order_by("id")
+        for goal in parsed_sdg_goals
     ]
+
+    report_fields.insert(
+        manual_fields_count,
+        ("Aligned SDG Goals", _format_display(sdg_goal_numbers)),
+    )
 
     naac_tags = [
         formatted
