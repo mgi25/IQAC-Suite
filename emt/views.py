@@ -146,7 +146,9 @@ def _build_report_initial_data(report: EventReport) -> dict:
                 "event_coordinators": _listify(report.organizing_committee),
                 "student_volunteers_count": _text(report.num_student_volunteers),
             },
+            "student_volunteers": _text(report.num_student_volunteers),
             "attendees_count": _text(report.num_participants),
+            "participants_count": _text(report.num_participants),
         },
         "narrative": {
             "summary_overall_event": _text(report.summary),
@@ -4195,7 +4197,9 @@ def preview_event_report(request, proposal_id):
                 "event_coordinators": committee_entries,
                 "student_volunteers_count": student_volunteers_value,
             },
+            "student_volunteers": student_volunteers_value,
             "attendees_count": attendees_count_value,
+            "participants_count": attendees_count_value,
         },
         "narrative": {
             "summary_overall_event": summary_value,
