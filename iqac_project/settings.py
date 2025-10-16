@@ -2,61 +2,9 @@ import importlib.util
 import os
 from pathlib import Path
 
-try:
-    from dotenv import load_dotenv
 
-    BASE_DIR = Path(__file__).resolve().parent.parent
-    load_dotenv(dotenv_path=BASE_DIR / ".env")
-except Exception:
-    pass
-import dj_database_url
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ---- .env loader (django-environ if available, else os.getenv) ----
-
-try:
-    import environ
-
-    env = environ.Env()
-    environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
-except Exception:
-    env = None
-
-
-def _env(key: str, default=None, cast=None):
-    """Unified env reader: prefer django-environ, fallback to os.getenv, then default."""
-    if env:
-        try:
-            return env(key) if cast is None else cast(env(key))
-        except Exception:
-            pass
-    val = os.getenv(key, default)
-    if cast and isinstance(val, str):
-        try:
-            return cast(val)
-        except Exception:
-            return default
-    return val
-
-
-# ---- AI config with safe defaults ----
-AI_BACKEND = _env("AI_BACKEND", default="OLLAMA")  # OLLAMA | OPENROUTER
-OLLAMA_BASE = _env("OLLAMA_BASE", default="http://127.0.0.1:11434")
-OLLAMA_MODEL = _env("OLLAMA_MODEL", default="llama3")  # guarantees a default
-AI_HTTP_TIMEOUT = _env("AI_HTTP_TIMEOUT", default="120")
-try:
-    AI_HTTP_TIMEOUT = int(AI_HTTP_TIMEOUT)
-except Exception:
-    AI_HTTP_TIMEOUT = 120
-
-# Optional: generator/critic models if used elsewhere in code
-OLLAMA_GEN_MODEL = _env("OLLAMA_GEN_MODEL", default=OLLAMA_MODEL)
-OLLAMA_CRITIC_MODEL = _env("OLLAMA_CRITIC_MODEL", default=OLLAMA_MODEL)
-
-# Optional cloud fallback (only used if key provided or AI_BACKEND='OPENROUTER')
-OPENROUTER_API_KEY = _env("OPENROUTER_API_KEY", default="")
-OPENROUTER_MODEL = _env("OPENROUTER_MODEL", default="qwen/qwen3.5:free")
-
-# SECRET_KEY loaded from environment with a development fallback
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-…")
 DEBUG = True
 
@@ -117,15 +65,6 @@ INSTALLED_APPS = [
     "usermanagement.apps.UserManagementConfig",
 ]
 
-# Allow toggling the debug toolbar without editing settings
-ENABLE_DEBUG_TOOLBAR = (
-    _env("ENABLE_DEBUG_TOOLBAR", default="true").lower() == "true"
-)
-DEBUG_TOOLBAR_AVAILABLE = importlib.util.find_spec("debug_toolbar") is not None
-USE_DEBUG_TOOLBAR = DEBUG and ENABLE_DEBUG_TOOLBAR and DEBUG_TOOLBAR_AVAILABLE
-
-if USE_DEBUG_TOOLBAR:
-    INSTALLED_APPS.append("debug_toolbar")
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 # ──────────────────────────────────────────────────────────────────────────────
@@ -146,12 +85,6 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-if USE_DEBUG_TOOLBAR:
-    # Ensure the toolbar middleware runs early, right after security
-    MIDDLEWARE.insert(1, "debug_toolbar.middleware.DebugToolbarMiddleware")
-
-# Allow embedding pages within iframes on the same origin (needed for Review Center)
-# Default is 'DENY' which blocks our internal preview iframe.
 X_FRAME_OPTIONS = "SAMEORIGIN"
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -189,15 +122,11 @@ WSGI_APPLICATION = "iqac_project.wsgi.application"
 # ──────────────────────────────────────────────────────────────────────────────
 
 DATABASES = {
-    "default": dj_database_url.config(
-        env="DATABASE_URL",
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
-        ssl_require=False,
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
-if "railway.internal" in DATABASES["default"].get("HOST", ""):
-    raise RuntimeError("Invalid DB host — still pointing to Railway.")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -209,7 +138,7 @@ AUTHENTICATION_BACKENDS = [
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
-SITE_ID = 2
+SITE_ID = 1
 
 
 LOGIN_URL = "/accounts/login/"
@@ -350,34 +279,10 @@ else:
 # ──────────────────────────────────────────────────────────────────────────────
 # EMAIL (SMTP) CONFIGURATION
 # ──────────────────────────────────────────────────────────────────────────────
-# Use env to enable/disable notifications globally
-EMAIL_NOTIFICATIONS_ENABLED = _env("EMAIL_NOTIFICATIONS_ENABLED", default="true").lower() == "true"
-
-# Backend and SMTP server settings
-EMAIL_BACKEND = _env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
-EMAIL_HOST = _env("EMAIL_HOST", default="smtp.gmail.com")
-EMAIL_PORT = int(_env("EMAIL_PORT", default="587"))
-EMAIL_USE_TLS = _env("EMAIL_USE_TLS", default="true").lower() == "true"
-EMAIL_USE_SSL = _env("EMAIL_USE_SSL", default="false").lower() == "true"
-EMAIL_HOST_USER = _env("EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = _env("EMAIL_HOST_PASSWORD", default="")
-DEFAULT_FROM_EMAIL = _env("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER or "noreply@iqac.local")
-
-# Optional addresses for module notifications
-CDL_NOTIF_EMAIL = _env("CDL_NOTIF_EMAIL", default="")
-
-# ──────────────────────────────────────────────────────────────────────────────
-# OPTIONAL: Django Debug Toolbar (only if installed & DEBUG true)
-# ──────────────────────────────────────────────────────────────────────────────
-if DEBUG:
-    try:
-        import debug_toolbar  # noqa: F401
-        if "debug_toolbar" not in INSTALLED_APPS:
-            INSTALLED_APPS.append("debug_toolbar")
-        if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
-            # Insert early (after security) so it can wrap responses
-            insert_at = 1 if len(MIDDLEWARE) else 0
-            MIDDLEWARE.insert(insert_at, "debug_toolbar.middleware.DebugToolbarMiddleware")
-    except ModuleNotFoundError:
-        # Silently skip if not available; prevents ModuleNotFoundError in prod / minimal envs
-        pass
+# Email config
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "EMAIL_ID"
+EMAIL_HOST_PASSWORD = "EMAIL_HOST_PASSWORD"
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

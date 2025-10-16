@@ -1,5 +1,7 @@
 # AI Text Generation Field Map
 
+> **Status:** AI-powered generation has been disabled. The information below is retained for historical reference only.
+
 This guide lists every text area that currently exposes an “Generate with AI” control in the Submit Proposal and Event Report flows. For each field the table captures the DOM identifier, the intended backend endpoint, and the proposal/report data that should be sent to the model when composing the prompt. The field requirements are taken from the existing `suite/field_config` JSON definitions and from the data payloads exported to the frontend.
 
 ## Submit Proposal – “Why this event?” section

@@ -2,14 +2,12 @@ import copy
 import csv
 import json
 import logging
-import os
 import re
 from datetime import datetime, timedelta
 from operator import attrgetter
 from types import SimpleNamespace
 from urllib.parse import urlparse
 
-import google.generativeai as genai
 import pdfkit
 import requests
 from bs4 import BeautifulSoup
@@ -26,7 +24,6 @@ from django.http import (
     HttpResponse,
     HttpResponseNotAllowed,
     JsonResponse,
-    StreamingHttpResponse,
 )
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
@@ -59,7 +56,6 @@ from emt.utils import (ATTENDANCE_HEADERS,
                        get_downstream_optional_candidates,
                        parse_attendance_csv, skip_all_downstream_optionals,
                        unlock_optionals_after)
-from suite.ai_client import AIError, chat
 from transcript.models import get_active_academic_year
 
 from .forms import (NAME_PATTERN, CDLSupportForm, EventProposalForm,
@@ -80,13 +76,6 @@ ACADEMIC_COORDINATOR_ROLE = "academic_coordinator"
 logger = logging.getLogger(__name__)
 NAME_RE = re.compile(NAME_PATTERN)
 MAX_ACTIVE_DRAFTS = 5
-
-# Configure Gemini API key from environment variable(s)
-# Prefer `GEMINI_API_KEY`; fall back to `GOOGLE_API_KEY`
-api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
-
 
 # ────────────────────────────────────────────────────────────────
 #  Review Center (Single Page Workflow)
@@ -5223,105 +5212,22 @@ def suite_dashboard(request):
     )
 
 
+def _ai_disabled_response():
+    return HttpResponse("AI integration is disabled.", status=503)
+
+
 @login_required
 def ai_generate_report(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id)
-    report, created = EventReport.objects.get_or_create(proposal=proposal)
-
-    # This should be replaced with actual AI generation logic
-    context = {
-        "proposal": proposal,
-        "report": report,
-        "ai_content": "This is a placeholder for AI-generated content. Integrate with your AI service here.",
-    }
-    return render(request, "emt/ai_generate_report.html", context)
+    get_object_or_404(EventProposal, id=proposal_id)
+    return _ai_disabled_response()
 
 
 @csrf_exempt
 def generate_ai_report(request):
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-
-            prompt = f"""
-            You are an expert in academic event reporting for university IQAC documentation.
-            Generate a detailed, formal, and highly structured IQAC-style event report using the following data.
-            **Follow the given format strictly**. Use professional, concise,
-            academic language. Format all sections as shown, and fill any
-            missing info sensibly if needed.
-
-            ---
-            # EVENT INFORMATION
-            | Field                 | Value                                |
-            |----------------------|-------------------------------|
-            | Department           | {data.get('department', '')} |
-            | Location             | {data.get('location', '')} |
-            | Event Title          | {data.get('event_title', '')} |
-            | No of Activities     | {data.get('no_of_activities', '1')} |
-            | Date and Time        | {data.get('event_datetime', '')} |
-            | Venue                | {data.get('venue', '')} |
-            | Academic Year        | {data.get('academic_year', '')} |
-            | Event Type (Focus)   | {data.get('event_focus_type', '')} |
-
-            # PARTICIPANTS INFORMATION
-            | Field                   | Value                                |
-            |-------------------------|----------------------------|
-            | Target Audience         | {data.get('target_audience', '')} |
-            | Organising Committee    | {data.get('organising_committee_details', '')} |
-            | No of Student Volunteers| {data.get('no_of_volunteers', '')} |
-            | No of Attendees         | {data.get('no_of_attendees', '')} |
-
-            # SUMMARY OF THE OVERALL EVENT
-            {data.get(
-                'summary',
-                (
-                    'Please write a 2-3 paragraph formal summary of the event. '
-                    'Cover objectives, flow, engagement, and outcomes.'
-                ),
-            )}
-
-            # OUTCOMES OF THE EVENT
-            {data.get('outcomes', '- List 3-5 major outcomes, in bullets.')}
-
-            # ANALYSIS
-            - Impact on Attendees: {data.get('impact_on_attendees', '')}
-            - Impact on Schools: {data.get('impact_on_schools', '')}
-            - Impact on Volunteers: {data.get('impact_on_volunteers', '')}
-
-            # RELEVANCE OF THE EVENT
-            | Criteria                | Description                         |
-            |-------------------------|-----------------------------|
-            | Graduate Attributes     | {data.get('graduate_attributes', '')} |
-            | Support to SDGs/Values  | {data.get('sdg_value_systems_mapping', '')} |
-
-            # SUGGESTIONS FOR IMPROVEMENT / FEEDBACK FROM IQAC
-            {data.get('iqac_feedback', '')}
-
-            # ATTACHMENTS/EVIDENCE
-            {data.get('attachments', '- List any evidence (photos, worksheets, etc.) if available.')}
-
-            ---
-
-            ## Ensure the final output is clear, formal, and as per IQAC standards.
-            ## DO NOT leave sections blank; fill with professional-sounding content if data is missing.
-            """
-
-            model = genai.GenerativeModel("models/gemini-1.5-pro-latest")
-            response = model.generate_content(prompt)
-
-            # Google GenAI occasionally returns None
-            if not response or not hasattr(response, "text"):
-                return JsonResponse(
-                    {"error": "AI did not return any text."}, status=500
-                )
-
-            return JsonResponse({"report_text": response.text})
-
-        except Exception as e:
-            print("AI Generation error:", e)
-            return JsonResponse({"error": str(e)}, status=500)
-
-    return JsonResponse({"error": "Only POST allowed"}, status=405)
+    return JsonResponse(
+        {"ok": False, "error": "AI integration is disabled."},
+        status=503,
+    )
 
 
 @csrf_exempt
@@ -5364,31 +5270,8 @@ def ai_report_partial(request, proposal_id):
 
 @login_required
 def generate_ai_report_stream(request, proposal_id):
-    import time
-
-    proposal = get_object_or_404(EventProposal, id=proposal_id)
-    report = EventReport.objects.get_or_create(proposal=proposal)[0]
-    # Compose strict, flat prompt!
-
-    genai.GenerativeModel("models/gemini-1.5-pro-latest")
-
-    chunks = [
-        f"# Event Report: {proposal.event_title}\n\n",
-        "## Summary\nThis is a simulated AI-generated report...\n\n",
-        "## Outcomes\n- Outcome 1\n- Outcome 2\n\n",
-        "## Recommendations\nFuture improvements...\n",
-    ]
-
-    def generate():
-
-        for chunk in chunks:
-            yield chunk
-            time.sleep(0.5)  # Simulate delay
-
-    report.ai_generated_report = "".join(chunks)
-    report.save()
-
-    return StreamingHttpResponse(generate(), content_type="text/plain")
+    get_object_or_404(EventProposal, id=proposal_id)
+    return _ai_disabled_response()
 
 
 @login_required
@@ -5401,43 +5284,8 @@ def admin_dashboard(request):
 
 @login_required
 def ai_report_edit(request, proposal_id):
-    proposal = get_object_or_404(EventProposal, id=proposal_id)
-    last_instructions = ""
-    last_fields = ""
-    if request.method == "POST":
-        # Collect user changes/prompts
-        instructions = request.POST.get("instructions", "").strip()
-        manual_fields = request.POST.get("manual_fields", "").strip()
-        # You may want to store these temporarily for next reload
-        last_instructions = instructions
-        last_fields = manual_fields
-
-        # Construct a new prompt for the AI
-        ai_prompt = f"""
-        Please regenerate the IQAC Event Report as before,
-        but follow these special user instructions:
-        ---
-        {instructions}
-        ---
-        {manual_fields}
-        ---
-        Use the same field structure as before.
-        """
-
-        # Call Gemini here or set a session variable with prompt and redirect to progress
-        request.session["ai_custom_prompt"] = ai_prompt
-        return redirect("emt:ai_report_progress", proposal_id=proposal.id)
-
-    # Pre-fill manual_fields with last generated report fields if you want
-    return render(
-        request,
-        "emt/ai_report_edit.html",
-        {
-            "proposal": proposal,
-            "last_instructions": last_instructions,
-            "last_fields": last_fields,
-        },
-    )
+    get_object_or_404(EventProposal, id=proposal_id)
+    return _ai_disabled_response()
 
 
 @login_required
@@ -5507,101 +5355,28 @@ def admin_reports_view(request):
         return HttpResponse(f"An error occurred: {e}", status=500)
 
 
-def _basic_info_context(data):
-    parts = []
-    title = (data.get("title") or "").strip()
-    if title:
-        parts.append(f"Event title: {title}")
-    audience = (data.get("audience") or "").strip()
-    if audience:
-        parts.append(f"Target audience: {audience}")
-    focus = (data.get("focus") or "").strip()
-    if focus:
-        parts.append(f"Event focus: {focus}")
-    venue = (data.get("venue") or "").strip()
-    if venue:
-        parts.append(f"Location: {venue}")
-    existing = (data.get("context") or "").strip()
-    if existing:
-        parts.append(f"Existing text:\n{existing}")
-    return "\n".join(parts)[:3000]
-
-
-NEED_PROMPT = "Write a concise, factual Need Analysis (80-140 words) for the event."
-OBJ_PROMPT = "Provide 3-5 clear objectives for the event as bullet points."
-OUT_PROMPT = "List 3-5 expected learning outcomes for participants as bullet points."
-
-
 @login_required
 @require_POST
 def generate_need_analysis(request):
-    ctx = _basic_info_context(request.POST)
-    if not ctx:
-        return JsonResponse({"ok": False, "error": "No context"}, status=400)
-    try:
-        messages = [{"role": "user", "content": f"{NEED_PROMPT}\n\n{ctx}"}]
-        timeout = getattr(settings, "AI_HTTP_TIMEOUT", 60)
-        text = chat(
-            messages,
-            system="You write crisp academic content for university event proposals.",
-            timeout=timeout,
-        )
-        return JsonResponse({"ok": True, "text": text})
-    except AIError as exc:
-        logger.error("Need analysis generation failed: %s", exc)
-        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
-    except Exception as exc:
-        logger.error("Need analysis generation unexpected error: %s", exc)
-        return JsonResponse(
-            {"ok": False, "error": f"Unexpected error: {exc}"}, status=500
-        )
+    return JsonResponse(
+        {"ok": False, "error": "AI integration is disabled."},
+        status=503,
+    )
 
 
 @login_required
 @require_POST
 def generate_objectives(request):
-    ctx = _basic_info_context(request.POST)
-    if not ctx:
-        return JsonResponse({"ok": False, "error": "No context"}, status=400)
-    try:
-        messages = [{"role": "user", "content": f"{OBJ_PROMPT}\n\n{ctx}"}]
-        timeout = getattr(settings, "AI_HTTP_TIMEOUT", 60)
-        text = chat(
-            messages,
-            system="You write measurable, outcome-focused objectives aligned to higher-education events.",
-            timeout=timeout,
-        )
-        return JsonResponse({"ok": True, "text": text})
-    except AIError as exc:
-        logger.error("Objectives generation failed: %s", exc)
-        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
-    except Exception as exc:
-        logger.error("Objectives generation unexpected error: %s", exc)
-        return JsonResponse(
-            {"ok": False, "error": f"Unexpected error: {exc}"}, status=500
-        )
+    return JsonResponse(
+        {"ok": False, "error": "AI integration is disabled."},
+        status=503,
+    )
 
 
 @login_required
 @require_POST
 def generate_expected_outcomes(request):
-    ctx = _basic_info_context(request.POST)
-    if not ctx:
-        return JsonResponse({"ok": False, "error": "No context"}, status=400)
-    try:
-        messages = [{"role": "user", "content": f"{OUT_PROMPT}\n\n{ctx}"}]
-        timeout = getattr(settings, "AI_HTTP_TIMEOUT", 60)
-        text = chat(
-            messages,
-            system="You write measurable expected outcomes for higher-education events.",
-            timeout=timeout,
-        )
-        return JsonResponse({"ok": True, "text": text})
-    except AIError as exc:
-        logger.error("Expected outcomes generation failed: %s", exc)
-        return JsonResponse({"ok": False, "error": str(exc)}, status=503)
-    except Exception as exc:
-        logger.error("Expected outcomes generation unexpected error: %s", exc)
-        return JsonResponse(
-            {"ok": False, "error": f"Unexpected error: {exc}"}, status=500
-        )
+    return JsonResponse(
+        {"ok": False, "error": "AI integration is disabled."},
+        status=503,
+    )

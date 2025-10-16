@@ -1,10 +1,6 @@
-from unittest.mock import patch
-
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
-
-from ai import client_ollama
 
 
 class EnhanceSummaryTests(TestCase):
@@ -12,29 +8,19 @@ class EnhanceSummaryTests(TestCase):
         self.user = User.objects.create_user("u", "u@example.com", "p")
         self.client.force_login(self.user)
 
-    @patch("ai.enhance_summary.chat")
-    def test_enhance_summary_success(self, mock_chat):
-        mock_chat.return_value = "improved"
+    def test_enhance_summary_requires_text(self):
+        resp = self.client.post(reverse("emt:enhance_summary"), {})
+        self.assertEqual(resp.status_code, 400)
+        data = resp.json()
+        self.assertFalse(data["ok"])
+        self.assertIn("no summary", data["error"].lower())
+
+    def test_enhance_summary_disabled(self):
         resp = self.client.post(
             reverse("emt:enhance_summary"),
-            {
-                "text": "original",
-                "title": "T",
-                "department": "D",
-                "start_date": "2024-01-01",
-                "end_date": "2024-01-02",
-            },
+            {"text": "original", "title": "T"},
         )
-        self.assertEqual(resp.status_code, 200)
-        data = resp.json()
-        self.assertTrue(data["ok"])
-        self.assertEqual(data["summary"], "improved")
-
-    @patch("ai.enhance_summary.chat")
-    def test_enhance_summary_error(self, mock_chat):
-        mock_chat.side_effect = client_ollama.AIError("down")
-        resp = self.client.post(reverse("emt:enhance_summary"), {"text": "t"})
         self.assertEqual(resp.status_code, 503)
         data = resp.json()
         self.assertFalse(data["ok"])
-        self.assertIn("down", data["error"])
+        self.assertIn("disabled", data["error"].lower())

@@ -83,31 +83,7 @@ Database (SQLite / PostgreSQL)
 
 ## AI Integration
 
-IQAC-Suite relies on **local AI models** served through [Ollama](https://github.com/ollama/ollama) to assist with tasks like report drafting and critique. All AI interactions are routed through helpers in the `ai/` directory.
-
-### Environment Variables
-
-Configure the following in your `.env` file:
-
-```bash
-AI_BACKEND=OLLAMA
-OLLAMA_BASE=http://127.0.0.1:11434
-OLLAMA_GEN_MODEL=llama3.1
-OLLAMA_CRITIC_MODEL=llama3.1
-```
-
-### Task Routing
-
-- `need-analysis`, `report-outline`, `report-section` → writer model
-- `critique` → critic model
-- Add new tasks in `ai/router.py`; **never** hardcode cloud model names.
-
-### Long Report Pipeline
-
-1. Generate outline.
-2. `parse_outline_to_titles`.
-3. For each title: generate section → critique → save to `EventReport.summary`.
-4. Stream progress through `ai_report_progress`, `ai_report_partial`, and `generate_ai_report_stream` views.
+AI-assisted generation has been removed from IQAC-Suite. The legacy endpoints remain for backward compatibility but now return a `503 Service Unavailable` response with an “AI integration is disabled” message. No additional environment variables or local model runtimes are required.
 
 ---
 

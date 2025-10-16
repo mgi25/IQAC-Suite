@@ -1,17 +1,5 @@
-# AI Integration
+# AI Integration (Deprecated)
 
-The application can use OpenRouter or a local HTTP server for AI-generated Need Analysis.
+The Ollama/OpenRouter based text generation pipeline has been removed from IQAC-Suite. The related Django views and JavaScript entry points now surface a `503 Service Unavailable` response so existing clients fail gracefully.
 
-## Local HTTP backend
-
-1. Start the local server:
-   ```bash
-   uvicorn local_ai_server:app --host 127.0.0.1 --port 8000
-   ```
-2. Configure `.env`:
-   ```bash
-   AI_BACKEND=LOCAL_HTTP
-   LOCAL_AI_BASE_URL=http://127.0.0.1:8000
-   LOCAL_AI_MODEL=Qwen2.5-7B-Instruct-1M
-   ```
-3. Restart Django and use the "Generate with AI" button.
+No local model server or AI-specific `.env` configuration is required. If you plan to add new automation features, document them separately and ensure they remain optional for deployments that do not run AI services.

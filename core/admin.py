@@ -13,6 +13,7 @@ from .models import (
     CDLRequest,
     CertificateBatch,
     CertificateEntry,
+    OrganizationType,
     Organization,
     SDGGoal,
     SidebarModule,
@@ -70,7 +71,7 @@ admin.site.register(CDLCommunicationThread)
 admin.site.register(CDLMessage)
 admin.site.register(CertificateBatch)
 admin.site.register(CertificateEntry)
-
+admin.site.register(OrganizationType)
 
 @admin.register(Organization)
 class OrganizationAdmin(admin.ModelAdmin):
