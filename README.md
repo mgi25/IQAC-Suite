@@ -81,9 +81,10 @@ Database (SQLite / PostgreSQL)
 
 ---
 
-## AI Integration
 
-AI-assisted generation has been removed from IQAC-Suite. The legacy endpoints remain for backward compatibility but now return a `503 Service Unavailable` response with an “AI integration is disabled” message. No additional environment variables or local model runtimes are required.
+## AI Integration (Removed)
+
+All AI-assisted features and endpoints have been fully removed from IQAC-Suite. No AI model runtimes, API keys, or related configuration are required. All proposal and report generation is now fully manual and user-driven.
 
 ---
 
@@ -114,8 +115,7 @@ DEBUG=True
 SECRET_KEY=your-secret-key
 DATABASE_URL=sqlite:///db.sqlite3
 ALLOWED_HOSTS=127.0.0.1,localhost
-# Either set `GEMINI_API_KEY` or `GOOGLE_API_KEY` for Gemini access
-GEMINI_API_KEY=your-gemini-api-key
+
 ```
 
 If `DATABASE_URL` is omitted, the project falls back to a local SQLite database at `db.sqlite3`. Provide a PostgreSQL URL only when you have access to that server.
