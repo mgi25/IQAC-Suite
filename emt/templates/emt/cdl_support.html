@@ -5,6 +5,80 @@
 
 {% block head_extra %}
   <link rel="stylesheet" href="{% static 'emt/css/styles.css' %}">
+  <style>
+    /* Ensure section headers keep title and toggle on one line */
+  .cdl-section .form-section-header { display: flex !important; align-items: center !important; justify-content: space-between !important; margin: 1.25rem 0 .5rem; flex-wrap: nowrap !important; gap: 1rem; }
+  .cdl-section .form-section-header > h3 { margin: 0; flex: 1 1 auto !important; width: auto !important; }
+  /* For headers where we want the toggle right next to the title */
+  .cdl-section .form-section-header.with-inline-toggle { justify-content: flex-start !important; gap: .75rem !important; }
+  .cdl-section .form-section-header.with-inline-toggle > h3 { flex: 0 0 auto !important; display: inline-flex; align-items: center; gap: .5rem; }
+  .cdl-section .form-section-header.with-inline-toggle .section-toggle-inline { margin-left: 0 !important; }
+    .cdl-section .form-section-header .section-toggle-inline { margin-left: auto !important; width: auto; flex: 0 0 auto; display: inline-flex !important; align-items: center; gap: .5rem; white-space: nowrap; }
+    .cdl-section .section-toggle-inline label { display: inline-flex; align-items: center; gap: .5rem; margin: 0; white-space: nowrap; }
+
+    /* Toggle switch core styles (visible span-based slider) */
+    .switch-label { display: inline-flex !important; align-items: center; gap: .5rem; cursor: pointer; }
+  .switch-ui { position: relative; width: 46px; height: 26px; background: #cbd5e1; border-radius: 999px; box-shadow: inset 0 0 0 1px #94a3b8; transition: background .22s ease; display: inline-block !important; vertical-align: middle; cursor: pointer; }
+  .switch-ui::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; background: #fff; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .22s cubic-bezier(.4,.0,.2,1); }
+  .switch-ui.is-on { background: #2563eb; box-shadow: inset 0 0 0 1px #1d4ed8; }
+  .switch-ui.is-on::after { transform: translateX(20px); }
+  .switch-label:hover .switch-ui:not(.is-on) { background:#b8c3cf; }
+  .switch-ui.is-on { background:#2563eb !important; box-shadow: inset 0 0 0 1px #1d4ed8 !important; }
+
+    /* Chip styles to guarantee single-row, full-width layout */
+    .chip-options { display: flex; flex-wrap: wrap; gap: .75rem; width: 100%; }
+    .chip-inline { align-items: stretch; display: flex; }
+    .chip-inline .chip-option { flex: 1 1 0; min-width: 220px; }
+    .chip-option { display: inline-flex; align-items: center; gap: .5rem; padding: .75rem 1rem; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; color: #111827; cursor: pointer; user-select: none; box-shadow: 0 1px 2px rgba(0,0,0,.03); transition: border-color .2s ease, box-shadow .2s ease, background .2s ease; }
+    .chip-option input[type="radio"], .chip-option input[type="checkbox"] { appearance: none !important; -webkit-appearance: none !important; width: 18px; height: 18px; border: 1.5px solid #9ca3af; border-radius: 4px; display: inline-block; position: relative; background: #fff; }
+    .chip-option input[type="radio"]:checked, .chip-option input[type="checkbox"]:checked { background: #10b981; border-color: #0ea5a0; }
+    .chip-option input[type="radio"]:checked::after, .chip-option input[type="checkbox"]:checked::after { content: ""; position: absolute; top: 2px; left: 5px; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+    .choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+    @media (max-width: 640px) { .choice-grid { grid-template-columns: 1fr; } }
+
+    /* Visually hidden (for accessible labels next to slider-only toggles) */
+    .sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0, 0, 1px, 1px) !important; white-space: nowrap !important; border: 0 !important; }
+
+    /* Always-visible right-edge header toggle */
+    .form-section-header.has-right-toggle { position: relative; padding-right: 60px; }
+    .form-section-header .header-toggle { position: absolute; right: 0; top: 50%; transform: translateY(-50%); display: inline-flex !important; align-items: center; }
+  .form-section-header .header-toggle .switch-ui { display:none; }
+  /* Pill toggle (more visible with ON/OFF text) */
+  .pill-toggle { position:relative; display:inline-flex; align-items:center; cursor:pointer; }
+  .pill-toggle input { position:absolute; opacity:0; width:0; height:0; }
+  .pill-track { --on:#2563eb; --off:#64748b; position:relative; width:70px; height:28px; background:var(--off); border-radius:40px; display:inline-flex; align-items:center; justify-content:space-between; padding:0 8px; font-size:11px; font-weight:600; letter-spacing:.5px; color:#fff; box-shadow:0 1px 3px rgba(0,0,0,.2); transition:background .25s ease; }
+  .pill-track::before { content:attr(data-off); flex:1; text-align:left; opacity:1; transition:opacity .2s ease; }
+  .pill-track::after { content:attr(data-on); position:absolute; right:8px; opacity:0; transition:opacity .2s ease; }
+  .pill-toggle input:checked + .pill-track { background:var(--on); }
+  .pill-toggle input:checked + .pill-track::before { opacity:0; }
+  .pill-toggle input:checked + .pill-track::after { opacity:1; }
+  .pill-toggle input:focus-visible + .pill-track { outline:3px solid rgba(37,99,235,.5); outline-offset:2px; }
+  /* New single question row */
+  .cdl-support-row { display:flex; align-items:center; justify-content:space-between; padding:.75rem 1rem 0; margin:0 0 .75rem; gap:1rem; border-bottom:1px solid #e2e8f0; }
+  .cdl-support-question { font-weight:600; color:#0f2940; font-size:.95rem; }
+  .cdl-support-toggle-mini { flex:0 0 auto; }
+  @media (max-width:640px){ .cdl-support-row { flex-wrap:wrap; padding:.75rem .5rem 0; } .cdl-support-question { flex:1 1 100%; } }
+  /* Other Requirements field styling */
+  .other-req-wrapper { margin-top:.75rem; }
+  .other-req-wrapper textarea { width:100%; min-height:80px; resize:vertical; border:1px solid #d1d9e0; border-radius:8px; padding:.6rem .75rem; font-size:.9rem; font-family:inherit; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.03); }
+  .other-req-wrapper textarea:focus { outline:2px solid #2563eb; outline-offset:2px; border-color:#2563eb; }
+  /* Master toggle visual */
+  /* Self-contained slider toggle (robust against global label/span overrides) */
+  .cdl-switch { -webkit-appearance:none; appearance:none; width:54px; height:28px; background:#cbd5e1; border-radius:40px; position:relative; display:inline-block; cursor:pointer; outline:none; border:none; box-shadow:inset 0 0 0 1px #94a3b8; transition:background .25s ease; vertical-align:middle; }
+  .cdl-switch::after { content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; background:#fff; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:transform .25s cubic-bezier(.4,0,.2,1); }
+  .cdl-switch:checked { background:#2563eb; box-shadow:inset 0 0 0 1px #1d4ed8; }
+  .cdl-switch:checked::after { transform:translateX(26px); }
+  .cdl-switch:focus-visible { outline:3px solid rgba(37,99,235,.55); outline-offset:2px; }
+  /* High-specificity fallback to ensure Width/Height retention */
+  .cdl-section input#id_needs_support.cdl-switch { width:54px !important; height:28px !important; padding:0 !important; }
+  /* Remove blue outline box around radio container (poster_choice) */
+  .radio-clean { outline:none !important; border:none !important; }
+  .radio-clean:focus, .radio-clean:focus-within { outline:none !important; box-shadow:none !important; }
+  /* Dynamic other services chip */
+  #chip-other-custom input { appearance:none; -webkit-appearance:none; width:18px; height:18px; border:1.5px solid #9ca3af; border-radius:4px; position:relative; background:#fff; margin:0; }
+  #chip-other-custom input:checked { background:#2563eb; border-color:#1d4ed8; }
+  #chip-other-custom input:checked::after { content:""; position:absolute; top:2px; left:5px; width:4px; height:8px; border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg); }
+  </style>
 {% endblock %}
 
 {% block content %}
@@ -19,174 +93,193 @@
   <form method="post" id="cdl-form">
     {% csrf_token %}
     
-    <!-- CDL Container - Matching Income Container -->
+    <!-- CDL Container redesigned to match proposal sections -->
     <div class="cdl-container">
-      
-      <!-- Empty State (Hidden when CDL support is enabled) -->
-      <div class="cdl-empty-state" id="cdl-empty-state">
-        <div class="empty-state-icon"><i class="fa-solid fa-clipboard"></i></div>
-        <h4>No CDL support requested yet</h4>
-        <p>Enable CDL support to access poster, certificate, and content services</p>
-      </div>
 
-      <!-- CDL Support Toggle (Always visible) -->
-      <div class="cdl-support-toggle">
-        <div class="input-group">
-            <label for="{{ form.needs_support.id_for_label }}" class="cdl-toggle-label">
-              <input type="checkbox" id="{{ form.needs_support.id_for_label }}" name="{{ form.needs_support.name }}" class="proposal-input" {% if form.needs_support.value %}checked{% endif %}>
-            <span class="cdl-toggle-text">I need CDL support for this event</span>
-          </label>
-          <div class="help-text">Check this box to access Content Development Lab services</div>
+      <!-- CDL Support Single Question Row -->
+      <div class="cdl-support-row">
+        <div class="cdl-support-question">Do you need CDL support for this event?</div>
+        <div class="cdl-support-toggle-mini" style="display:flex;align-items:center;gap:.5rem;">
+          <input type="checkbox" id="{{ form.needs_support.id_for_label }}" name="{{ form.needs_support.name }}" class="cdl-switch" {% if form.needs_support.value %}checked{% endif %}>
         </div>
       </div>
 
       <!-- CDL Services (Hidden initially, shown when support is enabled) -->
       <div id="cdl-services-container" style="display:none;">
         
-        <!-- Poster Support Card -->
-        <div class="cdl-service-card" id="poster-service-card">
-          <div class="cdl-service-header">
-            <h3 class="cdl-service-title"><i class="fa-solid fa-paintbrush"></i> Poster Support</h3>
-            <div class="cdl-service-toggle">
-              <label>
-                <input type="checkbox" id="{{ form.poster_required.id_for_label }}" name="{{ form.poster_required.name }}" class="proposal-input" {% if form.poster_required.value %}checked{% endif %}>
-                <span>Enable</span>
-              </label>
+        <!-- Poster Support Section -->
+        <div class="form-section-header has-right-toggle" style="display:flex;align-items:center;gap:1rem;">
+          <h3 style="margin:0;display:flex;align-items:center;gap:.75rem;">
+            <i class="fa-solid fa-paintbrush"></i> Poster Support
+          </h3>
+          <div class="header-toggle">
+            <label class="pill-toggle" for="{{ form.poster_required.id_for_label }}">
+              <input type="checkbox" id="{{ form.poster_required.id_for_label }}" name="{{ form.poster_required.name }}" {% if form.poster_required.value %}checked{% endif %}>
+              <span class="pill-track" data-on="ON" data-off="OFF"></span>
+            </label>
+          </div>
+        </div>
+
+        <div id="poster-details" class="form-grid" style="display:none;">
+          <div class="form-row full-width">
+            <div class="input-group">
+              <label for="{{ form.poster_choice.id_for_label }}">Poster Choice</label>
+              <div class="chip-options chip-inline" id="poster-choice-chips">
+                {% for opt in form.poster_choice %}
+                  <label class="chip-option">
+                    {{ opt.tag }}
+                    <span>{{ opt.choice_label }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+              <div class="help-text">Select your preferred poster style</div>
             </div>
           </div>
-          
-          <div class="cdl-service-content" id="poster-details" style="display:none;">
-            <div class="cdl-form-grid">
-              <div class="input-group">
-                <label for="{{ form.poster_choice.id_for_label }}">Poster Choice</label>
-                  {{ form.poster_choice }}
-                <div class="help-text">Select your preferred poster style</div>
-              </div>
-              <div class="input-group">
-                <label for="{{ form.organization_name.id_for_label }}">Organization Name</label>
-                  {{ form.organization_name }}
-                <div class="help-text">Name of organizing body</div>
-              </div>
-              <div class="input-group">
-                <label for="{{ form.poster_time.id_for_label }}">Event Time</label>
-                  {{ form.poster_time }}
-                <div class="help-text">Time for the event</div>
-              </div>
-              <div class="input-group">
-                <label for="{{ form.poster_date.id_for_label }}">Event Date</label>
-                  {{ form.poster_date }}
-                <div class="help-text">Date of the event</div>
-              </div>
-              <div class="input-group">
-                <label for="{{ form.poster_venue.id_for_label }}">Event Venue</label>
-                  {{ form.poster_venue }}
-                <div class="help-text">Location where event will be held</div>
-              </div>
-              <div class="input-group">
-                <label for="{{ form.resource_person_name.id_for_label }}">Resource Person Name</label>
-                  {{ form.resource_person_name }}
-                <div class="help-text">Name of the main speaker/presenter</div>
-              </div>
-              <div class="input-group">
-                <label for="{{ form.resource_person_designation.id_for_label }}">Resource Person Designation</label>
-                  {{ form.resource_person_designation }}
-                <div class="help-text">Title/position of the resource person</div>
-              </div>
-              <div class="input-group">
-                <label for="{{ form.poster_event_title.id_for_label }}">Event Title for Poster</label>
-                  {{ form.poster_event_title }}
-                <div class="help-text">Title as it should appear on poster</div>
-              </div>
-              <div class="input-group">
-                <label for="{{ form.poster_summary.id_for_label }}">Event Summary</label>
-                  {{ form.poster_summary }}
-                <div class="help-text">Brief description for the poster</div>
-              </div>
-              <div class="input-group">
-                <label for="{{ form.poster_design_link.id_for_label }}">Design Link/Reference</label>
-                  {{ form.poster_design_link }}
-                <div class="help-text">Link to design references or requirements</div>
-              </div>
+
+          <div class="form-row">
+            <div class="input-group">
+              <label for="{{ form.poster_date.id_for_label }}">Event Date</label>
+              {{ form.poster_date }}
+              <div class="help-text">Date of the event</div>
             </div>
-            <div class="cdl-info-banner">
-              <i class="fas fa-info-circle"></i>
-              <span>If requesting both poster and certificate, provide a single design file with poster on page 1 and certificate on page 2.</span>
+            <div class="input-group">
+              <label for="{{ form.poster_time.id_for_label }}">Event Time</label>
+              {{ form.poster_time }}
+              <div class="help-text">Time for the event</div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="input-group">
+              <label for="{{ form.poster_venue.id_for_label }}">Event Venue</label>
+              {{ form.poster_venue }}
+              <div class="help-text">Location where event will be held</div>
+            </div>
+            <div class="input-group">
+              <label for="{{ form.organization_name.id_for_label }}">Organization Name</label>
+              {{ form.organization_name }}
+              <div class="help-text">Name of organizing body</div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="input-group">
+              <label for="{{ form.resource_person_name.id_for_label }}">Resource Person Name</label>
+              {{ form.resource_person_name }}
+              <div class="help-text">Name of the main speaker/presenter</div>
+            </div>
+            <div class="input-group">
+              <label for="{{ form.resource_person_designation.id_for_label }}">Resource Person Designation</label>
+              {{ form.resource_person_designation }}
+              <div class="help-text">Title/position of the resource person</div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="input-group">
+              <label for="{{ form.poster_event_title.id_for_label }}">Event Title for Poster</label>
+              {{ form.poster_event_title }}
+              <div class="help-text">Title as it should appear on poster</div>
+            </div>
+            <div class="input-group">
+              <label for="{{ form.poster_design_link.id_for_label }}">Design Link/Reference</label>
+              {{ form.poster_design_link }}
+              <div class="help-text">Link to design references or requirements</div>
+            </div>
+          </div>
+
+          <div class="form-row full-width">
+            <div class="input-group">
+              <label for="{{ form.poster_summary.id_for_label }}">Event Summary</label>
+              {{ form.poster_summary }}
+              <div class="help-text">Brief description for the poster</div>
+            </div>
+          </div>
+
+          <div class="cdl-info-banner">
+            <i class="fas fa-info-circle"></i>
+            <span>If requesting both poster and certificate, provide a single design file with poster on page 1 and certificate on page 2.</span>
+          </div>
+        </div>
+
+        <!-- Certificate Support Section -->
+        <div class="form-section-header has-right-toggle" style="display:flex;align-items:center;gap:1rem;">
+          <h3 style="margin:0;display:flex;align-items:center;gap:.75rem;">
+            <i class="fa-solid fa-trophy"></i> Certificate Support
+          </h3>
+          <div class="header-toggle">
+            <label class="pill-toggle" for="{{ form.certificates_required.id_for_label }}">
+              <input type="checkbox" id="{{ form.certificates_required.id_for_label }}" name="{{ form.certificates_required.name }}" {% if form.certificates_required.value %}checked{% endif %}>
+              <span class="pill-track" data-on="ON" data-off="OFF"></span>
+            </label>
+          </div>
+        </div>
+
+        <div id="certificates-details" class="form-grid" style="display:none;">
+          <!-- Maintain backend compatibility: keep certificate_help as hidden and auto-enable when certificates are requested -->
+          <input type="hidden" id="id_certificate_help" name="{{ form.certificate_help.name }}" value="{% if form.certificate_help.value %}on{% endif %}">
+          <div class="form-row full-width">
+            <div class="input-group">
+              <label for="{{ form.certificate_choice.id_for_label }}">Certificate Choice</label>
+              <div class="chip-options chip-inline" id="certificate-choice-chips">
+                {% for opt in form.certificate_choice %}
+                  <label class="chip-option">
+                    {{ opt.tag }}
+                    <span>{{ opt.choice_label }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+              <div class="help-text">Select your preferred certificate style</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="input-group">
+              <label for="{{ form.certificate_design_link.id_for_label }}">Design Link/Reference</label>
+              {{ form.certificate_design_link }}
+              <div class="help-text">Link to design references or requirements</div>
+            </div>
+          </div>
+
+          <div class="cdl-info-banner">
+            <i class="fas fa-info-circle"></i>
+            <span>Use the same design file as poster if both are requested (page 2 for certificate).</span>
+          </div>
+        </div>
+
+        <!-- Other Services -->
+        <div class="form-section-header">
+          <h3><i class="fa-solid fa-wrench"></i> Other CDL Services</h3>
+        </div>
+        <div class="form-grid">
+          <div class="form-row full-width">
+            <div class="input-group">
+              <label for="{{ form.other_services.id_for_label }}">Additional Services</label>
+              <div class="choice-grid">
+                {% for opt in form.other_services %}
+                  <label class="chip-option">
+                    {{ opt.tag }}
+                    <span>{{ opt.choice_label }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+              <div class="other-req-wrapper" id="other-req-wrapper" style="display:none;">
+                <label for="id_other_requirements" style="font-weight:500; display:block; margin:.5rem 0 .25rem;">Other Requirements</label>
+                <textarea id="id_other_requirements" name="other_requirements" placeholder="Enter any additional CDL service needs (e.g., social media graphics, brochure design)..."></textarea>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Certificate Support Card -->
-        <div class="cdl-service-card" id="certificate-service-card">
-          <div class="cdl-service-header">
-            <h3 class="cdl-service-title"><i class="fa-solid fa-trophy"></i> Certificate Support</h3>
-            <div class="cdl-service-toggle">
-              <label>
-                  <input type="checkbox" id="{{ form.certificates_required.id_for_label }}" name="{{ form.certificates_required.name }}" class="proposal-input" {% if form.certificates_required.value %}checked{% endif %}>
-                <span>Enable</span>
-              </label>
-            </div>
-          </div>
-          
-          <div class="cdl-service-content" id="certificates-details" style="display:none;">
-            <div class="cdl-form-grid">
-              <div class="input-group">
-                <label for="{{ form.certificate_help.id_for_label }}">Certificate Design Help</label>
-                  <input type="checkbox" id="{{ form.certificate_help.id_for_label }}" name="{{ form.certificate_help.name }}" class="proposal-input" {% if form.certificate_help.value %}checked{% endif %}>
-                <div class="help-text">Do you need design assistance for certificates?</div>
-              </div>
-            </div>
-            
-            <div id="certificate-help-details" style="display:none;">
-              <div class="cdl-form-grid">
-                <div class="input-group">
-                  <label for="{{ form.certificate_choice.id_for_label }}">Certificate Choice</label>
-                    {{ form.certificate_choice }}
-                  <div class="help-text">Select your preferred certificate style</div>
-                </div>
-                <div class="input-group">
-                  <label for="{{ form.certificate_design_link.id_for_label }}">Design Link/Reference</label>
-                    {{ form.certificate_design_link }}
-                  <div class="help-text">Link to design references or requirements</div>
-                </div>
-              </div>
-              <div class="cdl-info-banner">
-                <i class="fas fa-info-circle"></i>
-                <span>Use the same design file as poster if both are requested (page 2 for certificate).</span>
-              </div>
-            </div>
-          </div>
+        <!-- Blog Content -->
+        <div class="form-section-header">
+          <h3><i class="fa-solid fa-pen"></i> Blog Content</h3>
         </div>
-
-        <!-- Other Services Card -->
-        <div class="cdl-service-card" id="other-services-card">
-          <div class="cdl-service-header">
-            <h3 class="cdl-service-title"><i class="fa-solid fa-wrench"></i> Other CDL Services</h3>
-          </div>
-          
-          <div class="cdl-service-content">
-            <div class="cdl-form-grid">
-              <div class="input-group">
-                <label for="{{ form.other_services.id_for_label }}">Additional Services</label>
-                  {{ form.other_services }}
-                <div class="help-text">Describe any other CDL services you need</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Blog Content Card -->
-        <div class="cdl-service-card" id="blog-content-card">
-          <div class="cdl-service-header">
-            <h3 class="cdl-service-title"><i class="fa-solid fa-pen"></i> Blog Content</h3>
-          </div>
-          
-          <div class="cdl-service-content">
-            <div class="cdl-form-grid">
-              <div class="input-group">
-                <label for="{{ form.blog_content.id_for_label }}">Blog Content</label>
-                  {{ form.blog_content }}
-                <div class="help-text">Provide up to 150 words for blog content</div>
-              </div>
+        <div class="form-grid">
+          <div class="form-row full-width">
+            <div class="input-group">
+              <label for="{{ form.blog_content.id_for_label }}">Blog Content</label>
+              {{ form.blog_content }}
+              <div class="help-text">Provide up to 150 words for blog content</div>
             </div>
           </div>
         </div>
@@ -206,6 +299,55 @@
 {% endblock %}
 
 {% block scripts %}
+  <style>
+    /* Scoped CDL styles - minimal and consistent with proposal sections */
+    .section-toggle-inline { margin-left: auto; display: flex; align-items: center; gap: .5rem; }
+  .cdl-section .form-section-header { display: flex !important; align-items: center !important; justify-content: space-between !important; margin: 1.25rem 0 .5rem; flex-wrap: nowrap !important; gap: 1rem; }
+  .cdl-section .form-section-header > h3 { margin: 0; flex: 1 1 auto !important; width: auto !important; }
+  .cdl-section .form-section-header .section-toggle-inline { margin-left: auto !important; width: auto; flex: 0 0 auto; display: inline-flex !important; align-items: center; gap: .5rem; white-space: nowrap; }
+  .cdl-section .section-toggle-inline label { display: inline-flex; align-items: center; gap: .5rem; margin: 0; white-space: nowrap; }
+    .inline-options { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
+    .inline-options label { margin: 0; display: inline-flex; align-items: center; gap: .5rem; }
+    .cdl-disabled { opacity: .6; pointer-events: none; }
+    .cdl-info-banner { display: flex; align-items: center; gap: .5rem; padding: .75rem 1rem; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; margin-top: .5rem; }
+
+    /* Toggle switch (matches theme) */
+  .switch-label { display: inline-flex !important; align-items: center; gap: .5rem; cursor: pointer; }
+  /* Ensure header toggles always render as sliders */
+  .form-section-header .header-toggle input.switch-native { -webkit-appearance: none !important; appearance: none !important; width: 44px !important; height: 24px !important; background: #e5e7eb !important; border-radius: 999px !important; box-shadow: inset 0 0 0 1px #cbd5e1 !important; position: relative !important; display: inline-block !important; vertical-align: middle !important; cursor: pointer !important; outline: none !important; }
+  .form-section-header .header-toggle input.switch-native::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: #fff; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.15); transition: transform .2s ease; }
+  .form-section-header .header-toggle input.switch-native:checked { background: #10b981 !important; box-shadow: inset 0 0 0 1px #0ea5a0 !important; }
+  .form-section-header .header-toggle input.switch-native:checked::after { transform: translateX(20px); }
+  /* Input-only slider styles (same as head) */
+  input.switch-native[type="checkbox"] {
+    -webkit-appearance: none !important; appearance: none !important; width: 44px !important; height: 24px !important; background: #e5e7eb !important; border-radius: 999px !important; box-shadow: inset 0 0 0 1px #cbd5e1 !important; position: relative !important; display: inline-block !important; vertical-align: middle !important; cursor: pointer !important; outline: none !important;
+  }
+  input.switch-native[type="checkbox"]::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: #fff; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.15); transition: transform .2s ease; }
+  input.switch-native[type="checkbox"]:checked { background: #10b981 !important; box-shadow: inset 0 0 0 1px #0ea5a0 !important; }
+  input.switch-native[type="checkbox"]:checked::after { transform: translateX(20px); }
+  .form-section-header .header-toggle input.switch-native { visibility: visible !important; opacity: 1 !important; }
+
+  /* Make sure the header toggle stays on the same line */
+  .cdl-section .form-section-header .section-toggle-inline, .cdl-section .form-section-header .section-toggle-inline label { white-space: nowrap !important; }
+  .cdl-section .form-section-header .section-toggle-inline input { display: inline-block !important; }
+
+    /* Chip-style options (checkbox/radio look) */
+  .chip-options { display: flex; flex-wrap: wrap; gap: .75rem; width: 100%; }
+  .chip-inline { align-items: stretch; display: flex; }
+  .chip-inline .chip-option { flex: 1 1 0; min-width: 220px; }
+  .chip-option { display: inline-flex; align-items: center; gap: .5rem; padding: .75rem 1rem; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; color: #111827; cursor: pointer; user-select: none; box-shadow: 0 1px 2px rgba(0,0,0,.03); transition: border-color .2s ease, box-shadow .2s ease, background .2s ease; }
+  .chip-option input[type="radio"], .chip-option input[type="checkbox"] { appearance: none !important; -webkit-appearance: none !important; width: 18px; height: 18px; border: 1.5px solid #9ca3af; border-radius: 4px; display: inline-block; position: relative; background: #fff; }
+  .chip-option input[type="radio"]:checked, .chip-option input[type="checkbox"]:checked { background: #10b981; border-color: #0ea5a0; }
+  .chip-option input[type="radio"]:checked::after, .chip-option input[type="checkbox"]:checked::after { content: ""; position: absolute; top: 2px; left: 5px; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+    .chip-option:hover { border-color: #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,.05); }
+    .chip-option input + span { font-weight: 500; }
+
+    /* Two-column grid for other services */
+    .choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+    @media (max-width: 640px) { .choice-grid { grid-template-columns: 1fr; } }
+  /* Visually hidden utility for accessible-only text */
+  .sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0, 0, 1px, 1px) !important; white-space: nowrap !important; border: 0 !important; }
+  </style>
   <script>
     window.PROPOSAL_ID = "{{ proposal.id|default:'' }}";
     window.AUTOSAVE_URL = "{% url 'emt:autosave_proposal' %}";
@@ -247,58 +389,90 @@
     };
 
     // Initialize CDL form functionality
-    document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function() {
+        // Sync any .switch-ui spans with their hidden checkbox state
+        document.querySelectorAll('.switch-label').forEach(label => {
+          const input = label.querySelector('input.switch-native');
+          const ui = label.querySelector('.switch-ui');
+          if (input && ui) {
+            const sync = () => { ui.classList.toggle('is-on', !!input.checked); };
+            sync();
+            input.addEventListener('change', sync);
+            // Also allow clicking the visual pill to toggle the checkbox
+            ui.addEventListener('click', (e) => { e.preventDefault(); input.click(); });
+          }
+        });
+
         const needsSupport = document.getElementById('id_needs_support');
-        const cdlEmptyState = document.getElementById('cdl-empty-state');
-        const cdlServicesContainer = document.getElementById('cdl-services-container');
+    const cdlServicesContainer = document.getElementById('cdl-services-container');
         const posterRequired = document.getElementById('id_poster_required');
         const posterDetails = document.getElementById('poster-details');
-        const certificatesRequired = document.getElementById('id_certificates_required');
-        const certificatesDetails = document.getElementById('certificates-details');
-        const certificateHelp = document.getElementById('id_certificate_help');
-        const certificateHelpDetails = document.getElementById('certificate-help-details');
+  const certificatesRequired = document.getElementById('id_certificates_required');
+  const certificatesDetails = document.getElementById('certificates-details');
         const autofillBtn = document.getElementById('cdl-autofill-btn');
+  const otherReqWrapper = document.getElementById('other-req-wrapper');
+  const otherOtherToggle = document.getElementById('id_other_custom_toggle');
 
-        function toggle(el, show) { 
-            if (el) el.style.display = show ? '' : 'none'; 
-        }
+  function toggle(el, show) { if (el) el.style.display = show ? '' : 'none'; }
 
-        function showEmptyState() {
-            const hasSupport = needsSupport && needsSupport.checked;
-            toggle(cdlEmptyState, !hasSupport);
-            toggle(cdlServicesContainer, hasSupport);
-        }
+    // FIX: Enable/disable (grey out) groups when toggled off
+    function setEnabled(container, enabled) {
+      if (!container) return;
+      const fields = container.querySelectorAll('input, select, textarea');
+      fields.forEach(el => {
+      if (el.id === 'id_needs_support') return;
+      el.disabled = !enabled;
+      });
+      container.classList.toggle('cdl-disabled', !enabled);
+    }
+
+    function applySupportState() {
+      const hasSupport = needsSupport && needsSupport.checked;
+      toggle(cdlServicesContainer, hasSupport);
+      setEnabled(cdlServicesContainer, !!hasSupport);
+    }
 
         // Main CDL support toggle
         if (needsSupport) {
-            needsSupport.addEventListener('change', () => {
-                showEmptyState();
-            });
-            showEmptyState();
+      needsSupport.addEventListener('change', () => {
+        applySupportState();
+      });
+      applySupportState();
+        }
+        // Show other requirements when Other selected
+        if (otherOtherToggle && otherReqWrapper) {
+          otherOtherToggle.addEventListener('change', () => {
+            toggle(otherReqWrapper, otherOtherToggle.checked);
+          });
+          toggle(otherReqWrapper, otherOtherToggle.checked);
         }
 
         // Poster details toggle
         if (posterRequired) {
             posterRequired.addEventListener('change', () => {
-                toggle(posterDetails, posterRequired.checked);
+        const on = posterRequired.checked;
+        toggle(posterDetails, on);
+        setEnabled(posterDetails, on);
             });
-            toggle(posterDetails, posterRequired.checked);
+      const initPosterOn = !!posterRequired.checked;
+      toggle(posterDetails, initPosterOn);
+      setEnabled(posterDetails, initPosterOn);
         }
 
         // Certificates details toggle
         if (certificatesRequired) {
             certificatesRequired.addEventListener('change', () => {
-                toggle(certificatesDetails, certificatesRequired.checked);
+              const on = certificatesRequired.checked;
+              toggle(certificatesDetails, on);
+              setEnabled(certificatesDetails, on);
+              const helpHidden = document.getElementById('id_certificate_help');
+              if (helpHidden) helpHidden.value = on ? 'on' : '';
             });
-            toggle(certificatesDetails, certificatesRequired.checked);
-        }
-
-        // Certificate help details toggle
-        if (certificateHelp) {
-            certificateHelp.addEventListener('change', () => {
-                toggle(certificateHelpDetails, certificateHelp.checked);
-            });
-            toggle(certificateHelpDetails, certificateHelp.checked);
+            const initCertOn = !!certificatesRequired.checked;
+            toggle(certificatesDetails, initCertOn);
+            setEnabled(certificatesDetails, initCertOn);
+            const helpHidden = document.getElementById('id_certificate_help');
+            if (helpHidden) helpHidden.value = initCertOn ? 'on' : '';
         }
 
         // Auto-fill functionality
@@ -317,32 +491,30 @@
                         posterRequired.dispatchEvent(new Event('change'));
                     }
 
-                    // Enable certificates
-                    if (certificatesRequired) {
-                        certificatesRequired.checked = true;
-                        certificatesRequired.dispatchEvent(new Event('change'));
-                    }
+          // Enable certificates
+          if (certificatesRequired) {
+            certificatesRequired.checked = true;
+            certificatesRequired.dispatchEvent(new Event('change'));
+          }
 
-                    // Enable certificate help
-                    setTimeout(() => {
-                        if (certificateHelp) {
-                            certificateHelp.checked = true;
-                            certificateHelp.dispatchEvent(new Event('change'));
-                        }
+          // Fill in all the form fields
+          setTimeout(() => {
+            Object.entries(CDL_AUTO_FILL_DATA).forEach(([key, value]) => {
+              const field = document.getElementById(`id_${key}`);
+              if (field) {
+                field.value = value;
+              }
+            });
 
-                        // Fill in all the form fields
-                        setTimeout(() => {
-                            Object.entries(CDL_AUTO_FILL_DATA).forEach(([key, value]) => {
-                                const field = document.getElementById(`id_${key}`);
-                                if (field) {
-                                    field.value = value;
-                                }
-                            });
+            // Default choices for demo
+            const posterFirst = document.querySelector('#poster-choice-chips input');
+            if (posterFirst) posterFirst.checked = true;
+            const certFirst = document.querySelector('#certificate-choice-chips input');
+            if (certFirst) certFirst.checked = true;
 
-                            // Show success message
-                            showCDLNotification('Test data filled successfully!', 'success');
-                        }, 100);
-                    }, 100);
+            // Show success message
+            showCDLNotification('Test data filled successfully!', 'success');
+          }, 100);
                 }, 100);
             });
         }
@@ -405,7 +577,7 @@
         }
 
         // Initialize state on page load
-        showEmptyState();
+  applySupportState();
     });
   </script>
   <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
