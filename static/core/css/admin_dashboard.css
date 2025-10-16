@@ -210,8 +210,17 @@ img{ max-width:100%; display:block; }
 .btn-solid:hover{ transform:translateY(-2px); box-shadow:var(--shadow-lg); filter:brightness(1.05); }
 
 /* Export bar (chips removed) */
-.sysbar{ margin-top:24px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-.sysbar .right{ margin-left:auto; }
+.ems-dashboard.admin-dash{ padding-bottom:120px; }
+
+.sysbar{
+  position:fixed; right:24px; bottom:24px; z-index:1020;
+  display:flex; gap:12px; align-items:center;
+}
+.sysbar .right{ margin-left:0; }
+
+@media (max-width:640px){
+  .sysbar{ left:16px; right:16px; justify-content:center; }
+}
 
 /* Empty */
 .empty{
