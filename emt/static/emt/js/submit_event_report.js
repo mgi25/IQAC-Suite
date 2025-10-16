@@ -3079,55 +3079,48 @@ function initializeSectionSpecificHandlers() {
     });
 }
 
-function setupDynamicActivities() {
-    console.log('Setting up dynamic activities...');
-    const numInput = document.getElementById('num-activities-modern');
-    const container = document.getElementById('dynamic-activities-section');
-    
-    console.log('Activities elements:', {
-        numInput: !!numInput,
-        container: !!container
-    });
-    
-    if (!numInput || !container) {
-        console.warn('Activities setup failed - missing elements');
-        return;
-    }
+const DynamicActivitiesController = (() => {
+    const state = {
+        numInput: null,
+        container: null,
+        activities: [],
+        initialized: false
+    };
 
-    // Check if activities are already server-rendered
-    const existingRows = container.querySelectorAll('.activity-row');
-    let activities = [];
+    function collectActivitiesFromDOM() {
+        const rows = state.container ? state.container.querySelectorAll('.activity-row') : [];
+        if (!rows || rows.length === 0) {
+            const initialActivities = Array.isArray(window.PROPOSAL_ACTIVITIES)
+                ? window.PROPOSAL_ACTIVITIES
+                : [];
+            const list = initialActivities.length > 0
+                ? [...initialActivities]
+                : [{ activity_name: '', activity_date: '' }];
+            return list.map((act) => ({
+                activity_name: act.activity_name || '',
+                activity_date: act.activity_date || ''
+            }));
+        }
 
-    // If server-rendered activities exist, preserve them
-    if (existingRows.length > 0) {
-        console.log('Found existing activity rows:', existingRows.length);
-        existingRows.forEach((row, idx) => {
-            const nameInput = row.querySelector(`input[name^="activity_name"]`);
-            const dateInput = row.querySelector(`input[name^="activity_date"]`);
-            activities.push({
+        const collected = [];
+        rows.forEach((row) => {
+            const nameInput = row.querySelector('input[name^="activity_name"]');
+            const dateInput = row.querySelector('input[name^="activity_date"]');
+            collected.push({
                 activity_name: nameInput ? nameInput.value : '',
                 activity_date: dateInput ? dateInput.value : ''
             });
         });
-    } else {
-        // Fallback to JavaScript data if no server-rendered activities
-        console.log('No server-rendered activities, using PROPOSAL_ACTIVITIES:', window.PROPOSAL_ACTIVITIES);
-        const initialActivities = Array.isArray(window.PROPOSAL_ACTIVITIES)
-            ? window.PROPOSAL_ACTIVITIES
-            : [];
-        activities = [...initialActivities];
-
-        // Ensure at least one blank activity row exists on initial load
-        if (activities.length === 0) {
-            console.log('No activities found, adding default empty activity');
-            activities.push({ activity_name: '', activity_date: '' });
-        }
+        return collected;
     }
 
-    function render() {
-        console.log('Rendering activities:', activities);
-        container.innerHTML = '';
-        activities.forEach((act, idx) => {
+    function renderActivities() {
+        if (!state.container || !state.numInput) {
+            return;
+        }
+
+        state.container.innerHTML = '';
+        state.activities.forEach((act, idx) => {
             const row = document.createElement('div');
             row.className = 'activity-row';
             row.innerHTML = `
@@ -3141,61 +3134,100 @@ function setupDynamicActivities() {
                 </div>
                 <button type="button" class="remove-activity btn btn-sm btn-outline-secondary" title="Remove this activity">×</button>
             `;
-            container.appendChild(row);
+            state.container.appendChild(row);
         });
-        numInput.value = activities.length;
-        console.log('Activities rendered successfully, count:', activities.length);
+
+        state.numInput.value = state.activities.length;
+
         if (window.ReportAutosaveManager) {
             ReportAutosaveManager.reinitialize();
         }
     }
 
-    container.addEventListener('click', (e) => {
-        if (e.target.classList.contains('remove-activity')) {
-            const row = e.target.closest('.activity-row');
-            const index = Array.from(container.children).indexOf(row);
-            if (index > -1) {
-                activities.splice(index, 1);
-                render();
-            }
+    function ensureAddButton() {
+        if (!state.container) {
+            return;
         }
-    });
 
-    // Handle input changes to sync with activities array
-    container.addEventListener('input', (e) => {
-        const input = e.target;
-        if (input.name && input.name.startsWith('activity_')) {
-            const match = input.name.match(/activity_(name|date)_(\d+)/);
-            if (match) {
-                const fieldType = match[1];
-                const index = parseInt(match[2], 10) - 1; // Convert to 0-based index
-                if (activities[index]) {
-                    activities[index][`activity_${fieldType}`] = input.value;
-                }
-            }
+        let addBtn = state.container.parentNode.querySelector('.btn-add-activity');
+        if (!addBtn) {
+            addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.className = 'btn-add-item btn-add-activity';
+            addBtn.textContent = 'Add Activity';
+            addBtn.style.marginTop = '0.5rem';
+            addBtn.addEventListener('click', () => {
+                state.activities.push({ activity_name: '', activity_date: '' });
+                renderActivities();
+            });
+            state.container.parentNode.insertBefore(addBtn, state.container.nextSibling);
         }
-    });
-
-    // Create and add "Add Activity" button dynamically (only if it doesn't exist)
-    let existingAddBtn = container.parentNode.querySelector('.btn-add-activity');
-    if (!existingAddBtn) {
-        const addBtn = document.createElement('button');
-        addBtn.type = 'button';
-        // Important: avoid 'btn-save-section' to prevent Save & Continue handler from firing
-        addBtn.className = 'btn-add-item btn-add-activity';
-        addBtn.textContent = 'Add Activity';
-        addBtn.style.marginTop = '0.5rem';
-        addBtn.addEventListener('click', () => {
-            activities.push({ activity_name: '', activity_date: '' });
-            render();
-        });
-        
-        // Insert the button after the container
-        container.parentNode.insertBefore(addBtn, container.nextSibling);
     }
 
-    // Always render the activities from proposal data
-    render();
+    function bindEventHandlers() {
+        if (!state.container || state.container.dataset.activitiesInitialized === 'true') {
+            return;
+        }
+
+        state.container.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-activity')) {
+                const row = e.target.closest('.activity-row');
+                const index = Array.from(state.container.children).indexOf(row);
+                if (index > -1) {
+                    state.activities.splice(index, 1);
+                    renderActivities();
+                }
+            }
+        });
+
+        state.container.addEventListener('input', (e) => {
+            const input = e.target;
+            if (!input.name || !input.name.startsWith('activity_')) {
+                return;
+            }
+            const match = input.name.match(/activity_(name|date)_(\d+)/);
+            if (!match) {
+                return;
+            }
+            const fieldType = match[1];
+            const index = parseInt(match[2], 10) - 1;
+            if (state.activities[index]) {
+                state.activities[index][`activity_${fieldType}`] = input.value;
+            }
+        });
+
+        state.container.dataset.activitiesInitialized = 'true';
+    }
+
+    function setup() {
+        console.log('Setting up dynamic activities...');
+        state.numInput = document.getElementById('num-activities-modern');
+        state.container = document.getElementById('dynamic-activities-section');
+
+        console.log('Activities elements:', {
+            numInput: !!state.numInput,
+            container: !!state.container
+        });
+
+        if (!state.numInput || !state.container) {
+            console.warn('Activities setup failed - missing elements');
+            state.initialized = false;
+            return;
+        }
+
+        state.activities = collectActivitiesFromDOM();
+        bindEventHandlers();
+        ensureAddButton();
+        renderActivities();
+        state.initialized = true;
+        console.log('Activities rendered successfully, count:', state.activities.length);
+    }
+
+    return { setup };
+})();
+
+function setupDynamicActivities() {
+    DynamicActivitiesController.setup();
 }
 
 function setupAttendanceLink() {
