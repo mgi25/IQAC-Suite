@@ -564,6 +564,18 @@ $(document).ready(function() {
                 setupDynamicActivitiesListener();
                 setupOutcomeModal();
                 setupAudienceModal();
+                // FIX: Rehydrate Target Audience visible input from hidden/draft on load
+                try {
+                    const audienceField = $('#target-audience-modern');
+                    const djangoAudienceField = $('#django-basic-info [name="target_audience"]');
+                    const storedFull = audienceField.data('fullAudience') || audienceField.attr('data-full-audience') || '';
+                    const hiddenVal = djangoAudienceField.length ? (djangoAudienceField.val() || '') : '';
+                    const currentVisible = audienceField.val() || '';
+                    const desired = (hiddenVal || storedFull || '').trim();
+                    if (desired && !currentVisible) {
+                        audienceField.val(desired).trigger('input').trigger('change');
+                    }
+                } catch (e) { /* no-op */ }
             }
             if (section === 'speakers') {
                 setupSpeakersSection();
@@ -2064,9 +2076,15 @@ $(document).ready(function() {
         const markPending = () => {
             realtime.sdgGoalsPendingSince = Date.now();
         };
+        // FIX: Prevent SDG selections from being cleared by remote sync immediately after autosave.
+        // Previously we reset the pending flag on every autosave:success, which could allow
+        // a slightly-delayed realtime update to overwrite the user's recent selections,
+        // making them appear to "deselect automatically". We keep the pending window active
+        // until a remote update matches local (handled below in updateSdgGoals) or the grace
+        // period elapses, ensuring selections remain stable until explicitly changed.
         if (!realtime.__sdgAutosaveHooked) {
             document.addEventListener('autosave:success', () => {
-                realtime.sdgGoalsPendingSince = 0;
+                // Intentionally left as no-op to retain pending state until states match.
             });
             realtime.__sdgAutosaveHooked = true;
         }
@@ -2308,7 +2326,7 @@ $(document).ready(function() {
                     <div class="input-group">
                         <label for="org-type-modern-input">Type of Organisation *</label>
                         <div id="org-type-modern">
-                            <select required><option value="">Select Organization Type</option></select>
+                            <select class="proposal-input" required><option value="">Select Organization Type</option></select>
                         </div>
                         <div class="help-text">Choose the type of organization hosting this event</div>
                     </div>
@@ -2319,7 +2337,7 @@ $(document).ready(function() {
                 <div class="form-row full-width">
                     <div class="input-group">
                         <label for="committees-collaborations-modern">Committees & Collaborations</label>
-                        <select id="committees-collaborations-modern" multiple placeholder="Type or select organizations..."></select>
+                        <select id="committees-collaborations-modern" class="proposal-input" multiple placeholder="Type or select organizations..."></select>
                         <div class="help-text">Mention internal committees and external partners involved</div>
                     </div>
                 </div>
@@ -2332,12 +2350,12 @@ $(document).ready(function() {
                 <div class="form-row">
                     <div class="input-group">
                         <label for="event-title-modern">Event Title *</label>
-                        <input type="text" id="event-title-modern" required placeholder="Enter a descriptive event title">
+                        <input type="text" id="event-title-modern" class="proposal-input" required placeholder="Enter a descriptive event title">
                         <div class="help-text">Provide a clear and engaging title for your event</div>
                     </div>
                     <div class="input-group">
                         <label for="target-audience-modern">Target Audience *</label>
-                        <input type="text" id="target-audience-modern" required readonly placeholder="Select target audience">
+                        <input type="text" id="target-audience-modern" class="proposal-input" required readonly placeholder="Select target audience">
                         <div class="help-text">Specify who this event is intended for</div>
                     </div>
                 </div>
@@ -2345,12 +2363,12 @@ $(document).ready(function() {
                 <div class="form-row">
                     <div class="input-group">
                         <label for="event-focus-type-modern">Event Focus Type</label>
-                        <input type="text" id="event-focus-type-modern" placeholder="Enter event focus">
+                        <input type="text" id="event-focus-type-modern" class="proposal-input" placeholder="Enter event focus">
                         <div class="help-text">Specify the primary focus of your event</div>
                     </div>
                     <div class="input-group">
                         <label for="venue-modern">Location</label>
-                        <input type="text" id="venue-modern" placeholder="e.g., Main Auditorium, Online">
+                        <input type="text" id="venue-modern" class="proposal-input" placeholder="e.g., Main Auditorium, Online">
                         <div class="help-text">Specify where the event will take place</div>
                     </div>
                 </div>
@@ -2363,12 +2381,12 @@ $(document).ready(function() {
                 <div class="form-row">
                     <div class="input-group">
                         <label for="event-start-date">Start Date *</label>
-                        <input type="date" id="event-start-date" required>
+                        <input type="date" id="event-start-date" class="proposal-input" required>
                         <div class="help-text">When does your event begin?</div>
                     </div>
                     <div class="input-group">
                         <label for="event-end-date">End Date *</label>
-                        <input type="date" id="event-end-date" required>
+                        <input type="date" id="event-end-date" class="proposal-input" required>
                         <div class="help-text">When does your event end?</div>
                     </div>
                 </div>
@@ -2376,13 +2394,13 @@ $(document).ready(function() {
                 <div class="form-row">
                     <div class="input-group">
                         <label for="academic-year-modern">Academic Year *</label>
-                        <input type="text" id="academic-year-modern" placeholder="2024-2025" disabled>
-                        <input type="hidden" name="academic_year" id="academic-year-hidden">
+                        <input type="text" id="academic-year-modern" class="proposal-input" placeholder="2024-2025" disabled>
+                        <input type="hidden" name="academic_year" id="academic-year-hidden" class="proposal-input">
                         <div class="help-text">Academic year for which this event is planned</div>
                     </div>
                     <div class="input-group">
                         <label for="pos-pso-modern">POS & PSO Management</label>
-                        <input type="text" id="pos-pso-modern" name="pos_pso" placeholder="e.g., PO1, PSO2">
+                        <input type="text" id="pos-pso-modern" name="pos_pso" class="proposal-input" placeholder="e.g., PO1, PSO2">
                         <div class="help-text">Program outcomes and specific outcomes addressed</div>
                     </div>
                 </div>
@@ -2395,7 +2413,7 @@ $(document).ready(function() {
                 <div class="form-row full-width">
                     <div class="input-group">
                         <label for="sdg-goals-modern">Aligned SDG Goals</label>
-                        <input type="text" id="sdg-goals-modern" placeholder="Select SDG goals">
+                        <input type="text" id="sdg-goals-modern" class="proposal-input" placeholder="Select SDG goals">
                         <div class="help-text">Specify which Sustainable Development Goals this event addresses</div>
                     </div>
                 </div>
@@ -2413,7 +2431,7 @@ $(document).ready(function() {
                     </div>
                     <div class="input-group">
                         <label for="student-coordinators-modern">Student Coordinators</label>
-                        <select id="student-coordinators-modern" multiple></select>
+                        <select id="student-coordinators-modern" class="proposal-input" multiple></select>
                         <div class="help-text">Search and select student coordinators by name</div>
                     </div>
                 </div>
@@ -2429,7 +2447,7 @@ $(document).ready(function() {
                 <div class="form-row full-width">
                     <div class="input-group">
                         <label for="faculty-select">Faculty Incharges *</label>
-                        <select id="faculty-select" multiple></select>
+                        <select id="faculty-select" class="proposal-input" multiple></select>
                         <div class="help-text">Select faculty members who will be in charge of this event</div>
                     </div>
                 </div>
@@ -4470,14 +4488,17 @@ function getWhyThisEventForm() {
     }
     
     function validateSchedule() {
+        // FIX: Validate against the actual DOM structure (div.schedule-row), not <tr>,
+        // and surface messages near the corresponding input-group.
         let isValid = true;
         if (!scheduleTableBody) return false;
 
-        scheduleTableBody.querySelectorAll('tr').forEach(tr => {
-            const timeInput = $(tr).find('.time-input');
-            const activityInput = $(tr).find('.activity-input');
-            const time = timeInput.val().trim();
-            const activity = activityInput.val().trim();
+        scheduleTableBody.querySelectorAll('.schedule-row').forEach((row) => {
+            const $row = $(row);
+            const timeInput = $row.find('.time-input');
+            const activityInput = $row.find('.activity-input');
+            const time = (timeInput.val() || '').trim();
+            const activity = (activityInput.val() || '').trim();
 
             if (!time && !activity) {
                 return; // Skip completely empty rows
@@ -4768,6 +4789,18 @@ function getWhyThisEventForm() {
             isValid = false;
         }
 
+        // FIX: Ensure end date is not before start date
+        const startVal = ($('#event-start-date').val() || '').trim();
+        const endVal = ($('#event-end-date').val() || '').trim();
+        if (startVal && endVal) {
+            const startTime = Date.parse(startVal);
+            const endTime = Date.parse(endVal);
+            if (!Number.isNaN(startTime) && !Number.isNaN(endTime) && endTime < startTime) {
+                showFieldError($('#event-end-date'), 'End Date must be on or after Start Date');
+                isValid = false;
+            }
+        }
+
         return isValid;
     }
 
@@ -4873,7 +4906,11 @@ function getWhyThisEventForm() {
     function clearFieldError(field) {
         if (field && field.length) {
             field.removeClass('has-error');
-            field.closest('.input-group').removeClass('has-error');
+            const group = field.closest('.input-group');
+            group.removeClass('has-error');
+            // FIX: Remove any lingering error message when the user edits the field
+            const err = group.find('.error-message');
+            if (err.length) err.remove();
         }
     }
 
@@ -4916,14 +4953,15 @@ function getWhyThisEventForm() {
     }
 
     function showScheduleError(field, message) {
+        // FIX: Render errors within the nearest .input-group instead of assuming table cells.
         if (!field || !field.length) return;
         field.addClass('has-error');
-        const td = field.closest('td');
-        if (!td.length) return;
-        let err = td.find('.error-message');
+        const group = field.closest('.input-group');
+        if (!group.length) return;
+        let err = group.find('.error-message');
         if (!err.length) {
             err = $('<div class="error-message"></div>');
-            td.append(err);
+            group.append(err);
         }
         err.text(message);
         const fieldData = {
