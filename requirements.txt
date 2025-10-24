@@ -8,7 +8,7 @@ cffi==2.0.0
 charset-normalizer==3.4.4
 cryptography==46.0.3
 cssselect2==0.8.0
-Django==5.2.3
+Django==5.2.7
 django-allauth==65.9.0
 django-debug-toolbar==6.0.0
 django-environ==0.12.0
