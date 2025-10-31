@@ -96,8 +96,12 @@ TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [BASE_DIR / "templates"],
-        "APP_DIRS": True,
+        "APP_DIRS": False,
         "OPTIONS": {
+            "loaders": [
+                "django.template.loaders.app_directories.Loader",
+                "django.template.loaders.filesystem.Loader",
+            ],
             "context_processors": [
                 "django.template.context_processors.request",  # ← required by allauth
                 "django.contrib.auth.context_processors.auth",
