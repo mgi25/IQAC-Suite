@@ -5366,6 +5366,15 @@ def generate_need_analysis(request):
 
 @login_required
 @require_POST
+def generate_why_event(request):
+    return JsonResponse(
+        {"ok": False, "error": "AI integration is disabled."},
+        status=503,
+    )
+
+
+@login_required
+@require_POST
 def generate_objectives(request):
     return JsonResponse(
         {"ok": False, "error": "AI integration is disabled."},

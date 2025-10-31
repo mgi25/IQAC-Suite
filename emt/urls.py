@@ -229,6 +229,26 @@ urlpatterns = [
         views.ai_report_submit,
         name="ai_report_submit",
     ),
+    path(
+        "ai/generate-why-event/",
+        views.generate_why_event,
+        name="generate_why_event",
+    ),
+    path(
+        "ai/generate-need-analysis/",
+        views.generate_need_analysis,
+        name="generate_need_analysis",
+    ),
+    path(
+        "ai/generate-objectives/",
+        views.generate_objectives,
+        name="generate_objectives",
+    ),
+    path(
+        "ai/generate-expected-outcomes/",
+        views.generate_expected_outcomes,
+        name="generate_expected_outcomes",
+    ),
 
     path("ai/enhance-summary/", ai_views.enhance_summary, name="enhance_summary"),
     path(
