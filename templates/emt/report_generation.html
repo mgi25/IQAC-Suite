@@ -1,1 +1,141 @@
-<!-- ...existing content from emt/templates/emt/report_generation.html... -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Generate Event Report | IQAC Suite{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'emt/css/iqac_generated_reports.css' %}">
+<style>
+  .report-shell { max-width: 960px; margin: 0 auto; }
+  .report-hero { background: linear-gradient(135deg, #1e3a8a, #274cba); color: #fff; border-radius: 20px; padding: 2rem 2.5rem; box-shadow: 0 20px 45px rgba(15,23,42,0.18); }
+  .report-hero h1 { font-size: 1.9rem; font-weight: 700; margin-bottom: 0.35rem; }
+  .report-hero p { margin: 0; font-size: 1rem; opacity: 0.9; }
+  .prefill-badge { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.9rem; border-radius: 999px; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28); font-weight: 600; font-size: 0.85rem; margin-top: 0.75rem; }
+  .report-card { background: #fff; border-radius: 18px; box-shadow: 0 18px 48px rgba(15,23,42,0.08); padding: 2.25rem; margin-top: -3.5rem; position: relative; }
+  .section-title { font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; font-weight: 700; margin-bottom: 1rem; }
+  .field-group { margin-bottom: 1.5rem; }
+  .field-group label { font-weight: 600; color: #1f2937; margin-bottom: 0.4rem; }
+  .field-group .form-control, .field-group textarea { border-radius: 12px; border: 1px solid #cbd5f5; padding: 0.7rem 0.85rem; }
+  .field-group textarea { min-height: 120px; }
+  .field-help { font-size: 0.8rem; color: #64748b; margin-top: 0.35rem; }
+  .report-actions { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-top: 2.5rem; }
+  .report-actions .btn { border-radius: 999px; padding: 0.65rem 1.8rem; font-weight: 600; }
+  .highlight-pill { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: 0.78rem; font-weight: 600; margin-right: 0.5rem; margin-top: 0.4rem; }
+  .divider { border-top: 1px solid #e2e8f0; margin: 2rem 0 1.75rem; }
+  @media (max-width: 768px) {
+    .report-card { padding: 1.5rem; }
+    .report-hero { padding: 1.5rem; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="report-shell">
+    <div class="report-hero">
+      <h1>Instant event report PDF</h1>
+      <p>Summarise your programme highlights and download a polished report in seconds.</p>
+      {% if proposal %}
+      <div class="prefill-badge"><i class="fa-solid fa-wand-magic-sparkles"></i> Prefilled from proposal #{{ proposal.id }}</div>
+      {% else %}
+      <div class="prefill-badge" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.18);"><i class="fa-regular fa-pen-to-square"></i> Fill out the quick form below</div>
+      {% endif %}
+    </div>
+
+    <div class="report-card">
+      <form method="post" action="{% url 'emt:generate_report_pdf' %}" class="report-form">
+        {% csrf_token %}
+
+        <section class="field-group">
+          <div class="section-title">Event overview</div>
+          <div class="row g-4">
+            <div class="col-md-8">
+              <label for="id_event_title" class="form-label">Event title</label>
+              <input type="text" class="form-control" id="id_event_title" name="event_title" value="{{ prefill.event_title|default_if_none:'' }}" placeholder="e.g., Data Science Summit" required>
+              <div class="field-help">We’ll use this for the PDF header and filename.</div>
+            </div>
+            <div class="col-md-4">
+              <label for="id_event_date" class="form-label">Event date</label>
+              <input type="date" class="form-control" id="id_event_date" name="event_date" value="{{ prefill.event_date|default_if_none:'' }}">
+            </div>
+            <div class="col-md-6">
+              <label for="id_department" class="form-label">Department / organising unit</label>
+              <input type="text" class="form-control" id="id_department" name="department" value="{{ prefill.department|default_if_none:'' }}" placeholder="e.g., Department of Computer Science">
+            </div>
+            <div class="col-md-6">
+              <label for="id_venue" class="form-label">Venue / location</label>
+              <input type="text" class="form-control" id="id_venue" name="venue" value="{{ prefill.venue|default_if_none:'' }}" placeholder="e.g., Innovation Lab">
+            </div>
+          </div>
+        </section>
+
+        <section class="field-group">
+          <div class="section-title">Narrative summary</div>
+          <div class="row g-4">
+            <div class="col-12">
+              <label for="id_event_summary" class="form-label">Event summary</label>
+              <textarea id="id_event_summary" name="event_summary" class="form-control" placeholder="Capture the overall narrative of the event">{{ prefill.event_summary|default_if_none:'' }}</textarea>
+              <div class="field-help">Describe the flow of the programme, key sessions, and overall experience.</div>
+            </div>
+            <div class="col-md-6">
+              <label for="id_key_outcomes" class="form-label">Key outcomes</label>
+              <textarea id="id_key_outcomes" name="key_outcomes" class="form-control" placeholder="List the major achievements or takeaways">{{ prefill.key_outcomes|default_if_none:'' }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label for="id_next_steps" class="form-label">Recommended next steps</label>
+              <textarea id="id_next_steps" name="next_steps" class="form-control" placeholder="Optional follow-up actions or recommendations">{{ prefill.next_steps|default_if_none:'' }}</textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="field-group">
+          <div class="section-title">Participants snapshot</div>
+          <div class="row g-4">
+            <div class="col-md-3">
+              <label for="id_total_participants" class="form-label">Total participants</label>
+              <input type="number" min="0" class="form-control" id="id_total_participants" name="total_participants" value="{{ prefill.total_participants|default_if_none:'' }}" placeholder="e.g., 120">
+            </div>
+            <div class="col-md-3">
+              <label for="id_student_participants" class="form-label">Student participants</label>
+              <input type="number" min="0" class="form-control" id="id_student_participants" name="student_participants" value="{{ prefill.student_participants|default_if_none:'' }}">
+            </div>
+            <div class="col-md-3">
+              <label for="id_faculty_participants" class="form-label">Faculty participants</label>
+              <input type="number" min="0" class="form-control" id="id_faculty_participants" name="faculty_participants" value="{{ prefill.faculty_participants|default_if_none:'' }}">
+            </div>
+            <div class="col-md-3">
+              <label for="id_external_participants" class="form-label">External participants</label>
+              <input type="number" min="0" class="form-control" id="id_external_participants" name="external_participants" value="{{ prefill.external_participants|default_if_none:'' }}">
+            </div>
+          </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <section class="field-group">
+          <div class="section-title">Highlights & feedback</div>
+          <div class="row g-4">
+            <div class="col-md-6">
+              <label for="id_highlights" class="form-label">Notable highlights</label>
+              <textarea id="id_highlights" name="highlights" class="form-control" placeholder="Key achievements, guest speakers, awards, etc.">{{ prefill.highlights|default_if_none:'' }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label for="id_feedback" class="form-label">Participant feedback / testimonials</label>
+              <textarea id="id_feedback" name="feedback" class="form-control" placeholder="Quotes, survey insights, reflections">{{ prefill.feedback|default_if_none:'' }}</textarea>
+            </div>
+          </div>
+          <div class="field-help mt-3">Add short bullet points; we’ll format them elegantly in the PDF.</div>
+        </section>
+
+        <div class="report-actions">
+          <div class="d-flex flex-wrap align-items-center gap-2 text-muted small">
+            <span class="highlight-pill"><i class="fa-regular fa-file-pdf"></i> PDF downloads instantly</span>
+            <span class="highlight-pill"><i class="fa-regular fa-floppy-disk"></i> Your inputs are not stored on the server</span>
+          </div>
+          <button type="submit" class="btn btn-primary">Download PDF</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
