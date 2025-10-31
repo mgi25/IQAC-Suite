@@ -23,13 +23,13 @@
   <div class="controls-container" id="controlsBar">
     <div class="filters-left">
       <label class="filter">
-        <span>Category</span>
-        <select id="categoryFilter" aria-label="Select category">
+        <span class="fs-6">Category</span>
+        <select id="categoryFilter" aria-label="Select category" class="form-control">
           <option value="all">All Categories</option>
           {% for org_type in org_types %}
             {% with key=org_type.name|lower %}
             <option value="{{ key }}">
-              {{ org_type.name }}{% if not key == 'cell' %}s{% endif %}
+              {{ org_type.name }}{% if not key == 'cell' %} {% endif %}
             </option>
             {% endwith %}
           {% endfor %}
@@ -37,19 +37,25 @@
       </label>
 
       <label class="filter">
-        <span>Status</span>
-        <select id="statusFilter" aria-label="Filter by status">
+        <span class="fs-6">Status</span>
+        <select id="statusFilter" aria-label="Filter by status" class="form-control">
           <option value="all">All</option>
           <option value="configured">Configured</option>
           <option value="not-configured">Not Configured</option>
         </select>
       </label>
 
-      <div class="search-bar">
+      <!-- <div class="search-bar">
         <i class="fas fa-search"></i>
-        <input type="text" id="universalSearch" placeholder="Search organizations..." aria-label="Search">
+        <input type="text" class="form-control" id="universalSearch" placeholder="Search organizations..." aria-label="Search">
         <button class="search-clear" id="searchClearBtn" title="Clear search" aria-label="Clear search">×</button>
+      </div> -->
+      <div class="search-bar d-flex align-items-center gap-2">
+        <i class="fas fa-search"></i>
+        <input type="text" class="form-control flex-grow-1" id="universalSearch" placeholder="Search organizations..." aria-label="Search">
+        <button class="btn btn-outline-secondary" id="searchClearBtn" title="Clear search" aria-label="Clear search">×</button>
       </div>
+      
     </div>
 
     <div class="main-actions">

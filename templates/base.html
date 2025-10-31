@@ -314,13 +314,13 @@
 
       <!-- Settings - Expandable (Admin Only) -->
   {% if unrestricted_nav or 'settings' in allowed_nav_items %}
-  <div class="nav-section {% if 'settings' in request.path %}expanded{% endif %}">
+  <div class="nav-section {% if 'settings' in request.path or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_academic_year_settings' or request.resolver_match.url_name == 'admin_history' or request.resolver_match.url_name == 'admin_sidebar_permissions' %}expanded{% endif %}">
     <div class="nav-section-header">
       <i class="fas fa-cog nav-icon"></i>
       <span class="nav-text">Settings</span>
-      <i class="fas fa-chevron-right expand-icon {% if 'settings' in request.path %}rotated{% endif %}"></i>
+      <i class="fas fa-chevron-right expand-icon {% if 'settings' in request.path or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_academic_year_settings' or request.resolver_match.url_name == 'admin_history' or request.resolver_match.url_name == 'admin_sidebar_permissions' %}rotated{% endif %}"></i>
     </div>
-    <div class="nav-submenu {% if 'settings' in request.path %}open{% endif %}">
+    <div class="nav-submenu {% if 'settings' in request.path or request.resolver_match.url_name == 'admin_master_data' or request.resolver_match.url_name == 'admin_approval_flow' or request.resolver_match.url_name == 'admin_pso_po_management' or request.resolver_match.url_name == 'admin_academic_year_settings' or request.resolver_match.url_name == 'admin_history' or request.resolver_match.url_name == 'admin_sidebar_permissions' %}open{% endif %}">
 
   {% if unrestricted_nav or 'user_settings' in allowed_nav_items %}
       <a href="{% url 'admin_master_data' %}" class="nav-sublink {% if request.resolver_match.url_name == 'admin_master_data' %}active{% endif %}">

@@ -23,15 +23,15 @@
   <div class="controls-container" id="controlsBar">
     <div class="filters-left">
       <label class="filter">
-        <span>Category</span>
-        <select id="categoryFilter" aria-label="Select category">
+        <span class="fs-6">Category</span>
+        <select id="categoryFilter" aria-label="Select category" class="form-control">
           {% for org_type in org_types %}
             {% with key=org_type.name|lower %}
             <option
               value="{{ key }}"
               data-can-have-parent="{% if org_type.can_have_parent %}true{% else %}false{% endif %}"
               data-parent-type="{% if org_type.parent_type %}{{ org_type.parent_type.name|lower }}{% endif %}">
-              {{ org_type.name }}{% if not key == 'cell' %}s{% endif %}
+              {{ org_type.name }}{% if not key == 'cell' %}{% endif %}
             </option>
             {% endwith %}
           {% endfor %}
@@ -39,18 +39,23 @@
       </label>
 
       <label class="filter">
-        <span>Status</span>
-        <select id="statusFilter" aria-label="Filter by status">
+        <span class="fs-6">Status</span>
+        <select id="statusFilter" aria-label="Filter by status" class="form-control">
           <option value="all">All</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
         </select>
       </label>
 
-      <div class="search-bar">
+      <!-- <div class="search-bar">
         <i class="fas fa-search"></i>
         <input type="text" id="universalSearch" placeholder="Search in selected category…" aria-label="Search">
         <button class="search-clear" id="searchClearBtn" title="Clear search" aria-label="Clear search">×</button>
+      </div> -->
+      <div class="search-bar d-flex align-items-center gap-2" style="background-color: transparent !important;  border: none !important; border-radius: 0 !important; border-radius: 10 !important;">
+        <i class="fas fa-search"></i>
+        <input type="text" class="form-control flex-grow-1" id="universalSearch" placeholder="Search organizations..." aria-label="Search">
+        <button class="btn btn-outline-secondary" id="searchClearBtn" title="Clear search" aria-label="Clear search">×</button>
       </div>
     </div>
 
@@ -176,7 +181,7 @@
                   </td>
                 </tr>
               {% empty %}
-                <tr><td colspan="{% if org_type.can_have_parent %}4{% else %}3{% endif %}" class="text-center">No {{ key }}s found.</td></tr>
+                <tr><td colspan="{% if org_type.can_have_parent %}4{% else %}3{% endif %}" class="text-center">No {{ key }} found.</td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -184,7 +189,7 @@
       </section>
       {% endwith %}
     {% endfor %}
-  </div>
+  </div>  
 
   <!-- Universal search (selected category scope): no-results -->
   <div id="search-not-found" class="search-not-found" style="display:none;">
