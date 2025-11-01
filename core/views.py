@@ -23,7 +23,11 @@ import json
 import logging
 
 logger = logging.getLogger(__name__)
-from .decorators import popso_manager_required, popso_program_access_required
+from .decorators import (
+    popso_manager_required,
+    popso_program_access_required,
+    sidebar_permission_required,
+)
 from .forms import RoleAssignmentForm, RegistrationForm, StudentAchievementForm
 from .models import (
     Profile,
@@ -2897,8 +2901,7 @@ def proposal_detail(request, proposal_id):
 def admin_settings_dashboard(request):
     return render(request, "core/admin_settings.html")
 
-@login_required
-@user_passes_test(lambda u: u.is_superuser)
+@sidebar_permission_required("settings:sidebar_permissions")
 def admin_sidebar_permissions(request):
     """Allow admin to configure sidebar items per user or role."""
     import json
@@ -3225,9 +3228,8 @@ def api_save_dashboard_assignments(request):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
-@login_required
-@user_passes_test(lambda u: u.is_superuser)
 @require_http_methods(["POST"])
+@sidebar_permission_required("settings:sidebar_permissions")
 def api_save_sidebar_permissions(request):
     """API endpoint to save sidebar permissions"""
     from .models import SidebarPermission
@@ -3332,8 +3334,7 @@ def api_get_dashboard_assignments(request):
     return resp
 
 
-@login_required
-@user_passes_test(lambda u: u.is_superuser)
+@sidebar_permission_required("settings:sidebar_permissions")
 def api_get_sidebar_permissions(request):
     """API endpoint to get sidebar permissions for a user or role"""
     from .models import SidebarPermission
