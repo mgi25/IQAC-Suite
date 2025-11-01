@@ -18,7 +18,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import EmailValidator, URLValidator
-from django.db.models import F, Q, Sum
+from django.db.models import Q, Sum
 from django.forms import modelformset_factory
 from django.http import (
     HttpResponse,
@@ -849,8 +849,11 @@ def start_proposal(request):
             submitted_by=request.user,
             status=EventProposal.Status.DRAFT,
             is_user_deleted=False,
-            event_title="Untitled Event",
-            updated_at__lte=F("created_at") + timedelta(seconds=1),
+        )
+        .filter(
+            Q(event_title="Untitled Event")
+            | Q(event_title="")
+            | Q(event_title__isnull=True)
         )
         .order_by("-created_at")
         .first()

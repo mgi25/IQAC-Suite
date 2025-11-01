@@ -44,3 +44,21 @@ class StartProposalViewTests(TestCase):
             "emt:submit_proposal_with_pk", args=[second_proposal.pk]
         )
         self.assertEqual(second_response["Location"], expected_second_location)
+
+    def test_reuses_blank_title_draft(self):
+        first_response = self.client.get(reverse("emt:start_proposal"))
+        self.assertEqual(first_response.status_code, 302)
+
+        proposal = EventProposal.objects.get()
+        proposal.event_title = ""
+        proposal.save(update_fields=["event_title"])
+
+        second_response = self.client.get(reverse("emt:start_proposal"))
+        self.assertEqual(second_response.status_code, 302)
+
+        self.assertEqual(EventProposal.objects.count(), 1)
+
+        expected_location = reverse(
+            "emt:submit_proposal_with_pk", args=[proposal.pk]
+        )
+        self.assertEqual(second_response["Location"], expected_location)
