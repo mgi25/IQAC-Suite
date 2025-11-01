@@ -4350,12 +4350,9 @@ function getWhyThisEventForm() {
 
             const fields = {
                 'event-title-modern': getRandom(AUTO_FILL_DATA.titles),
-                'venue-modern': getRandom(AUTO_FILL_DATA.venues),
-                'event-focus-type-modern': getRandom(AUTO_FILL_DATA.focusTypes),
                 'event-start-date': today,
                 'event-end-date': addDaysToDate(today, 1),
-                'academic-year-modern': academicYear,
-                'pos-pso-modern': 'PO1, PSO2 & PSO3'
+                'academic-year-modern': academicYear
             };
 
             Object.entries(fields).forEach(([id, value]) => setFieldValueById(id, value));
@@ -4365,22 +4362,8 @@ function getWhyThisEventForm() {
                 djangoAcademicYear.val(academicYear).trigger('change');
             }
 
-            selectRandomSdgGoal();
-            await fillActivityPlan(today);
-
             await autofillTargetAudienceFromBackend(orgMeta);
             await selectFacultyInchargeByEmail('alenjinmgi@gmail.com');
-            await selectStudentCoordinatorByName('Alen Jin Shibu');
-
-            const sc = document.getElementById('student-coordinators-modern');
-            const scTom = sc?.tomselect;
-            const currentCoordinators = scTom ? scTom.getValue() : Array.from(sc?.selectedOptions || []).map(opt => opt.value);
-            if (sc && (!currentCoordinators || (Array.isArray(currentCoordinators) && !currentCoordinators.length))) {
-                if (!scTom && !sc.options.length) {
-                    sc.appendChild(new Option('Data Science Student Lead', '1', true, true));
-                    sc.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            }
         }
 
         if (section === 'why-this-event') {
