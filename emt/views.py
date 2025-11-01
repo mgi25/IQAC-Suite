@@ -18,7 +18,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import EmailValidator, URLValidator
-from django.db.models import Q, Sum
+from django.db.models import F, Q, Sum
 from django.forms import modelformset_factory
 from django.http import (
     HttpResponse,
@@ -844,6 +844,21 @@ def _save_income(proposal, data):
 
 @login_required
 def start_proposal(request):
+    pristine_draft = (
+        EventProposal.objects.filter(
+            submitted_by=request.user,
+            status=EventProposal.Status.DRAFT,
+            is_user_deleted=False,
+            event_title="Untitled Event",
+            updated_at__lte=F("created_at") + timedelta(seconds=1),
+        )
+        .order_by("-created_at")
+        .first()
+    )
+
+    if pristine_draft:
+        return redirect("emt:submit_proposal_with_pk", pk=pristine_draft.pk)
+
     active_drafts = EventProposal.objects.filter(
         submitted_by=request.user,
         status=EventProposal.Status.DRAFT,
