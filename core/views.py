@@ -15,7 +15,7 @@ from django import forms
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
-from django.db import models, transaction, close_old_connections
+from django.db import models, transaction, close_old_connections, IntegrityError
 from django.db.models.functions import TruncDate
 from django.db.utils import InterfaceError, OperationalError
 from django.utils import timezone
@@ -3525,7 +3525,6 @@ def admin_academic_year_settings(request):
     form. The year string is derived from the provided start and end dates.
     """
 
-    from datetime import datetime
     from transcript.models import AcademicYear
 
     # Editing existing year if ``id`` provided in POST or ``edit`` in GET
@@ -3536,31 +3535,52 @@ def admin_academic_year_settings(request):
 
     if request.method == "POST":
         year_id = request.POST.get("id")
-        start = request.POST.get("start_date") or None
-        end = request.POST.get("end_date") or None
+        start_raw = request.POST.get("start_date") or ""
+        end_raw = request.POST.get("end_date") or ""
 
-        year_str = None
-        if start:
-            try:
-                start_year = datetime.strptime(start, "%Y-%m-%d").year
-                end_year = (
-                    datetime.strptime(end, "%Y-%m-%d").year if end else start_year + 1
+        try:
+            start_date = datetime.strptime(start_raw, "%Y-%m-%d").date()
+        except ValueError:
+            start_date = None
+
+        try:
+            end_date = datetime.strptime(end_raw, "%Y-%m-%d").date() if end_raw else None
+        except ValueError:
+            end_date = None
+
+        if not start_date or not end_date:
+            messages.error(request, "Start and end dates are required.")
+            return redirect("admin_academic_year_settings")
+
+        if end_date < start_date:
+            messages.error(request, "End date cannot be earlier than the start date.")
+            return redirect("admin_academic_year_settings")
+
+        end_year = end_date.year
+        year_str = f"{start_date.year}-{end_year}"
+
+        try:
+            if year_id:
+                obj = get_object_or_404(AcademicYear, pk=year_id)
+                obj.year = year_str
+                obj.start_date = start_date
+                obj.end_date = end_date
+                obj.save(update_fields=["year", "start_date", "end_date"])
+                messages.success(request, "Academic year updated.")
+            else:
+                # Ensure only one academic year is active at any time
+                AcademicYear.objects.filter(is_active=True).update(is_active=False)
+                AcademicYear.objects.create(
+                    year=year_str,
+                    start_date=start_date,
+                    end_date=end_date,
+                    is_active=True,
                 )
-                year_str = f"{start_year}-{end_year}"
-            except ValueError:
-                pass
-
-        if year_id:
-            obj = get_object_or_404(AcademicYear, pk=year_id)
-            obj.year = year_str
-            obj.start_date = start
-            obj.end_date = end
-            obj.save()
-        else:
-            # Ensure only one academic year is active at any time
-            AcademicYear.objects.filter(is_active=True).update(is_active=False)
-            AcademicYear.objects.create(
-                year=year_str, start_date=start, end_date=end, is_active=True
+                messages.success(request, "Academic year added and set as active.")
+        except IntegrityError:
+            messages.error(
+                request,
+                "An academic year with the same label already exists. Please adjust the dates.",
             )
         return redirect("admin_academic_year_settings")
 
@@ -3590,7 +3610,8 @@ def academic_year_archive(request, pk):
     year = get_object_or_404(AcademicYear, pk=pk)
     if request.method == "POST":
         year.is_active = False
-        year.save()
+        year.save(update_fields=["is_active"])
+        messages.success(request, "Academic year archived.")
     return redirect("admin_academic_year_settings")
 
 
@@ -3603,8 +3624,10 @@ def academic_year_restore(request, pk):
 
     year = get_object_or_404(AcademicYear, pk=pk)
     if request.method == "POST":
+        AcademicYear.objects.exclude(pk=year.pk).update(is_active=False)
         year.is_active = True
-        year.save()
+        year.save(update_fields=["is_active"])
+        messages.success(request, "Academic year restored and set as active.")
     return redirect("admin_academic_year_settings")
 
 @user_passes_test(lambda u: u.is_superuser)

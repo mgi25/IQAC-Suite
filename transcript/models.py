@@ -50,40 +50,40 @@ IST = ZoneInfo("Asia/Kolkata")
 
 
 def get_active_academic_year():
-    """Return the academic year covering the current date (in IST).
+    """Return the active academic year without mutating admin choices.
 
-    If an admin‑configured year exists and matches the current date range it is
-    returned. Otherwise a new year is created (or activated) based on the
-    current Indian date. This ensures proposals always reference the correct
-    academic year without allowing users to modify it manually.
+    Admins manage the active flag from the Academic Year Settings screen. The
+    helper simply returns the flagged year, creating a sensible default only
+    when no records exist yet (fresh install).
     """
 
+    active = (
+        AcademicYear.objects.filter(is_active=True)
+        .order_by("-start_date", "-id")
+        .first()
+    )
+    if active:
+        return active
+
+    # No active year configured. If any academic years exist, respect the
+    # admin's decision and return ``None``.
+    if AcademicYear.objects.exists():
+        return None
+
+    # Fresh install: create a default year covering the current academic cycle
+    # so that forms have a pre-filled value. The record is marked active.
     now = timezone.now().astimezone(IST)
     start_year = now.year if now.month >= 6 else now.year - 1
     end_year = start_year + 1
-    year_str = f"{start_year}-{end_year}"
+    start_date = now.date().replace(month=6, day=1)
+    end_date = now.date().replace(year=end_year, month=5, day=31)
 
-    ay = AcademicYear.objects.filter(is_active=True).order_by("-start_date").first()
-    if ay and ay.year == year_str:
-        return ay
-
-    if ay and ay.year != year_str:
-        ay.is_active = False
-        ay.save(update_fields=["is_active"])
-
-    ay, _ = AcademicYear.objects.get_or_create(
-        year=year_str,
-        defaults={
-            "is_active": True,
-            "start_date": now.date().replace(month=6, day=1),
-            "end_date": now.date().replace(year=end_year, month=5, day=31),
-        },
+    return AcademicYear.objects.create(
+        year=f"{start_year}-{end_year}",
+        start_date=start_date,
+        end_date=end_date,
+        is_active=True,
     )
-    if not ay.is_active:
-        AcademicYear.objects.filter(is_active=True).update(is_active=False)
-        ay.is_active = True
-        ay.save(update_fields=["is_active"])
-    return ay
 
 
 class School(models.Model):
