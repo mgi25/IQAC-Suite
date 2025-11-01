@@ -941,7 +941,10 @@ def submit_proposal(request, pk=None):
     selected_academic_year = active_year.year if active_year else ""
 
     if not pk:
-        return redirect("emt:start_proposal")
+        # Mirror the behaviour of visiting the "start proposal" route so tests
+        # and direct POSTs create a draft without requiring an explicit follow
+        # of the redirect.
+        return start_proposal(request)
 
     proposal = get_object_or_404(
         EventProposal.objects.prefetch_related(
