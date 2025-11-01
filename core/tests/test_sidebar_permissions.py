@@ -218,6 +218,32 @@ class SidebarPermissionsViewTests(TestCase):
             perm = SidebarPermission.objects.get(user=u)
             self.assertEqual(perm.items, ["dashboard"])
 
+    def test_reports_permission_allows_data_export(self):
+        user = User.objects.create_user("reporter", password="pass")
+        SidebarPermission.objects.create(user=user, items=["reports"])
+
+        self.client.logout()
+        self.client.login(username="reporter", password="pass")
+
+        response = self.client.get(reverse("data_export_filter"))
+        self.assertEqual(response.status_code, 200)
+
+        summary = self.client.get(reverse("api_quick_summary"))
+        self.assertEqual(summary.status_code, 200)
+
+    def test_user_management_permission_allows_impersonation(self):
+        acting = User.objects.create_user("manager", password="pass")
+        target = User.objects.create_user("target", password="pass")
+        SidebarPermission.objects.create(user=acting, items=["user_management"])
+
+        self.client.logout()
+        self.client.login(username="manager", password="pass")
+
+        url = reverse("admin_impersonate_user", args=[target.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.client.session.get("impersonate_user_id"), target.id)
+
     def test_admin_reports_view_requires_permission(self):
         staff = User.objects.create_user("reports_no_access", password="pass")
         self.client.logout()

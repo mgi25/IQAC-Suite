@@ -6109,15 +6109,13 @@ def build_organization_queryset(q=None, filters=None):
 # -------------------------
 # Dynamic filter endpoints (AJAX)
 # -------------------------
-@login_required
-@user_passes_test(is_admin)
+@sidebar_permission_required("reports")
 def data_export_filter_view(request):
     """Render the filter/search page template."""
     return render(request, 'core/data_export_filter.html')
 
 
-@login_required
-@user_passes_test(is_admin)
+@sidebar_permission_required("reports")
 def api_org_types(request):
     """Return active organization types for the filter panel."""
     qs = OrganizationType.objects.all().order_by('name')
@@ -6125,8 +6123,7 @@ def api_org_types(request):
     return JsonResponse(data, safe=False)
 
 
-@login_required
-@user_passes_test(is_admin)
+@sidebar_permission_required("reports")
 def api_orgs_by_type(request):
     """
     GET param: org_type_id
@@ -6152,8 +6149,7 @@ from django.views.decorators.http import require_http_methods
 # -------------------------
 # Filter metadata for each category
 # -------------------------
-@login_required
-@user_passes_test(is_admin)
+@sidebar_permission_required("reports")
 def api_filter_meta(request, category):
     """
     Returns metadata to help the frontend render the dynamic filter UI for the given category.
@@ -6218,8 +6214,7 @@ def api_filter_meta(request, category):
 # Unified search endpoint
 # -------------------------
 @csrf_exempt
-@login_required
-@user_passes_test(is_admin)
+@sidebar_permission_required("reports")
 def api_search(request):
     """
     Unified search endpoint.
@@ -6369,8 +6364,7 @@ def api_search(request):
 # Export endpoints (CSV / Excel)
 # -------------------------
 @csrf_exempt
-@login_required
-@user_passes_test(is_admin)
+@sidebar_permission_required("reports")
 def api_export_csv(request):
     """
     Export results as CSV. Accepts same payload as api_search.
@@ -6426,8 +6420,7 @@ def api_export_csv(request):
 
 
 @csrf_exempt
-@login_required
-@user_passes_test(is_admin)
+@sidebar_permission_required("reports")
 def api_export_excel(request):
     """
     Export results as XLSX (requires xlsxwriter).
@@ -6480,8 +6473,7 @@ def api_export_excel(request):
 # -------------------------
 # Quick summary endpoint for badges
 # -------------------------
-@login_required
-@user_passes_test(is_admin)
+@sidebar_permission_required("reports")
 def api_quick_summary(request):
     """Return counts for each category to display small badges in UI."""
     ot = request.GET.get('org_type')
@@ -6537,12 +6529,9 @@ def stop_impersonation(request):
         dashboard_url = '/core-admin/dashboard/'
     return redirect(dashboard_url)
 
-@login_required
+@sidebar_permission_required("user_management")
 def admin_impersonate_user(request, user_id):
     """Start impersonating a user from admin pages."""
-    if not is_admin(request.user):
-        raise PermissionDenied("You are not authorized to impersonate users.")
-
     # Allow impersonation of any existing user regardless of ``is_active`` status.
     # Previously we restricted to ``is_active=True`` which resulted in a 404
     # when attempting to impersonate inactive users from the user management
@@ -6559,11 +6548,9 @@ def admin_impersonate_user(request, user_id):
     next_url = safe_next(request, fallback=reverse('dashboard'))
     return redirect(next_url)
 
-@login_required
+@sidebar_permission_required("user_management")
 def get_recent_users_api(request):
     """Get recently switched users"""
-    if not is_admin(request.user):
-        raise PermissionDenied("Admin access required")
     try:
         # Get recent impersonation history (you might want to store this in a model)
         # For now, returning some sample data
@@ -6582,11 +6569,9 @@ def get_recent_users_api(request):
         return JsonResponse({'error': str(e)}, status=500)
 
     
-@login_required
+@sidebar_permission_required("user_management")
 def switch_user_view(request):
     """Display the switch user interface"""
-    if not is_admin(request.user):
-        raise PermissionDenied("Admin access required")
     users = User.objects.filter(is_active=True, last_login__isnull=False).select_related().order_by('username')
     
     # Get current impersonated user if any
@@ -6605,11 +6590,9 @@ def switch_user_view(request):
     }
     return render(request, 'core/switch_user.html', context)
 
-@login_required
+@sidebar_permission_required("user_management")
 def search_users_api(request):
     """API endpoint for quick user search"""
-    if not is_admin(request.user):
-        raise PermissionDenied("Admin access required")
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -6647,12 +6630,10 @@ def search_users_api(request):
     
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
-@login_required
 @require_POST
+@sidebar_permission_required("user_management")
 def impersonate_user(request):
     """Start impersonating a user"""
-    if not is_admin(request.user):
-        raise PermissionDenied("Admin access required")
     try:
         data = json.loads(request.body)
         user_id = data.get('user_id')
