@@ -844,6 +844,24 @@ def _save_income(proposal, data):
 
 @login_required
 def start_proposal(request):
+    pristine_draft = (
+        EventProposal.objects.filter(
+            submitted_by=request.user,
+            status=EventProposal.Status.DRAFT,
+            is_user_deleted=False,
+        )
+        .filter(
+            Q(event_title="Untitled Event")
+            | Q(event_title="")
+            | Q(event_title__isnull=True)
+        )
+        .order_by("-created_at")
+        .first()
+    )
+
+    if pristine_draft:
+        return redirect("emt:submit_proposal_with_pk", pk=pristine_draft.pk)
+
     active_drafts = EventProposal.objects.filter(
         submitted_by=request.user,
         status=EventProposal.Status.DRAFT,
@@ -872,25 +890,6 @@ def start_proposal(request):
 
 @login_required
 def proposal_drafts(request):
-    base_qs = EventProposal.objects.filter(
-        submitted_by=request.user,
-        status=EventProposal.Status.DRAFT,
-        is_user_deleted=False,
-    ).order_by("-updated_at")
-
-    active_ids = list(base_qs.values_list("id", flat=True))
-
-    if active_ids:
-        # Retain only the most recently updated draft for the user and hide the rest.
-        ids_to_keep = {active_ids[0]}
-        ids_to_archive = [draft_id for draft_id in active_ids if draft_id not in ids_to_keep]
-
-        if ids_to_archive:
-            EventProposal.objects.filter(id__in=ids_to_archive).update(
-                is_user_deleted=True,
-                updated_at=timezone.now(),
-            )
-
     drafts_qs = EventProposal.objects.filter(
         submitted_by=request.user,
         status=EventProposal.Status.DRAFT,
@@ -941,7 +940,10 @@ def submit_proposal(request, pk=None):
     selected_academic_year = active_year.year if active_year else ""
 
     if not pk:
-        return redirect("emt:start_proposal")
+        # Mirror the behaviour of visiting the "start proposal" route so tests
+        # and direct POSTs create a draft without requiring an explicit follow
+        # of the redirect.
+        return start_proposal(request)
 
     proposal = get_object_or_404(
         EventProposal.objects.prefetch_related(
@@ -1068,7 +1070,11 @@ def submit_proposal(request, pk=None):
         "outcomes": outcomes,
         "flow": flow,
         "sdg_goals_list": json.dumps(
-            list(SDGGoal.objects.filter(name__in=SDG_GOALS).values("id", "name"))
+            list(
+                SDGGoal.objects.filter(name__in=SDG_GOALS)
+                .order_by("id")
+                .values("id", "name")
+            )
         ),
         "activities_json": json.dumps(activities),
         "speakers_json": json.dumps(speakers),
@@ -3409,7 +3415,8 @@ def submit_event_report(request, proposal_id):
 
     # Prepare SDG goal data for modal and proposal prefill
     sdg_goals_list = [
-        {"id": goal.id, "title": goal.name} for goal in SDGGoal.objects.all()
+        {"id": goal.id, "title": goal.name}
+        for goal in SDGGoal.objects.order_by("id")
     ]
     proposal_sdg_goals = ", ".join(
         f"SDG{goal.id}: {goal.name}" for goal in proposal.sdg_goals.all()

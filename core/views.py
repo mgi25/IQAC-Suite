@@ -9,13 +9,13 @@ from django.http import HttpResponseForbidden, JsonResponse, HttpResponseRedirec
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.db.models import Q, Sum, Count
+from django.db.models import Q, Sum, Count, Exists, OuterRef
 from django.forms import inlineformset_factory
 from django import forms
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
-from django.db import models, transaction, close_old_connections
+from django.db import models, transaction, close_old_connections, IntegrityError
 from django.db.models.functions import TruncDate
 from django.db.utils import InterfaceError, OperationalError
 from django.utils import timezone
@@ -23,7 +23,11 @@ import json
 import logging
 
 logger = logging.getLogger(__name__)
-from .decorators import popso_manager_required, popso_program_access_required
+from .decorators import (
+    popso_manager_required,
+    popso_program_access_required,
+    sidebar_permission_required,
+)
 from .forms import RoleAssignmentForm, RegistrationForm, StudentAchievementForm
 from .models import (
     Profile,
@@ -55,7 +59,6 @@ from .models import (
 )
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
-from .decorators import admin_required
 from .models import FacultyMeeting
 from .forms import CDLRequestForm, CertificateBatchUploadForm, CDLMessageForm
 from usermanagement.models import JoinRequest
@@ -2552,19 +2555,86 @@ def admin_user_deactivate(request, user_id):
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_event_proposals(request):
-    proposals = EventProposal.objects.select_related('submitted_by', 'organization__org_type').all().order_by("-created_at")
+    proposals = (
+        EventProposal.objects
+        .select_related('submitted_by', 'organization__org_type')
+        .all()
+        .order_by("-created_at")
+    )
+
     q = request.GET.get("q", "").strip()
     status = request.GET.get("status", "").strip()
+
     if q:
         proposals = proposals.filter(
-            Q(event_title__icontains=q) |
-            Q(submitted_by__username__icontains=q) |
-            Q(organization__name__icontains=q) |
-            Q(organization__org_type__name__icontains=q)
+            Q(event_title__icontains=q)
+            | Q(submitted_by__username__icontains=q)
+            | Q(organization__name__icontains=q)
+            | Q(organization__org_type__name__icontains=q)
         )
+
     if status:
         proposals = proposals.filter(status=status)
-    return render(request, "core/admin_event_proposals.html", {"proposals": proposals})
+
+    total_count = proposals.count()
+
+    status_totals = {key: 0 for key, _ in EventProposal.Status.choices}
+    for row in proposals.values("status").annotate(total=Count("id")):
+        status_totals[row["status"]] = row["total"]
+
+    status_labels = {key: label for key, label in EventProposal.Status.choices}
+
+    status_hints = {
+        EventProposal.Status.SUBMITTED: "Awaiting triage",
+        EventProposal.Status.UNDER_REVIEW: "In approval flow",
+        EventProposal.Status.WAITING: "Pending stakeholder action",
+        EventProposal.Status.APPROVED: "Ready for execution",
+        EventProposal.Status.REJECTED: "Declined proposals",
+        EventProposal.Status.RETURNED: "Needs revision",
+        EventProposal.Status.FINALIZED: "Completed and archived",
+        EventProposal.Status.DRAFT: "Not yet submitted",
+    }
+
+    status_styles = {
+        EventProposal.Status.SUBMITTED: "submitted",
+        EventProposal.Status.UNDER_REVIEW: "under-review",
+        EventProposal.Status.WAITING: "waiting",
+        EventProposal.Status.APPROVED: "approved",
+        EventProposal.Status.REJECTED: "rejected",
+        EventProposal.Status.RETURNED: "returned",
+        EventProposal.Status.FINALIZED: "finalized",
+        EventProposal.Status.DRAFT: "draft",
+    }
+
+    status_order = [
+        EventProposal.Status.SUBMITTED,
+        EventProposal.Status.UNDER_REVIEW,
+        EventProposal.Status.WAITING,
+        EventProposal.Status.APPROVED,
+        EventProposal.Status.REJECTED,
+        EventProposal.Status.RETURNED,
+        EventProposal.Status.FINALIZED,
+    ]
+
+    status_summary = [
+        {
+            "key": key,
+            "label": status_labels.get(key, key.replace("_", " ").title()),
+            "count": status_totals.get(key, 0),
+            "hint": status_hints.get(key, ""),
+            "style": status_styles.get(key, "default"),
+        }
+        for key in status_order
+    ]
+
+    context = {
+        "proposals": proposals,
+        "total_count": total_count,
+        "status_summary": status_summary,
+        "status_choices": EventProposal.Status.choices,
+    }
+
+    return render(request, "core/admin_event_proposals.html", context)
 
 @user_passes_test(lambda u: u.is_superuser)
 def event_proposal_json(request, proposal_id):
@@ -2897,8 +2967,7 @@ def proposal_detail(request, proposal_id):
 def admin_settings_dashboard(request):
     return render(request, "core/admin_settings.html")
 
-@login_required
-@user_passes_test(lambda u: u.is_superuser)
+@sidebar_permission_required("settings:sidebar_permissions")
 def admin_sidebar_permissions(request):
     """Allow admin to configure sidebar items per user or role."""
     import json
@@ -3225,9 +3294,8 @@ def api_save_dashboard_assignments(request):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
-@login_required
-@user_passes_test(lambda u: u.is_superuser)
 @require_http_methods(["POST"])
+@sidebar_permission_required("settings:sidebar_permissions")
 def api_save_sidebar_permissions(request):
     """API endpoint to save sidebar permissions"""
     from .models import SidebarPermission
@@ -3332,8 +3400,7 @@ def api_get_dashboard_assignments(request):
     return resp
 
 
-@login_required
-@user_passes_test(lambda u: u.is_superuser)
+@sidebar_permission_required("settings:sidebar_permissions")
 def api_get_sidebar_permissions(request):
     """API endpoint to get sidebar permissions for a user or role"""
     from .models import SidebarPermission
@@ -3525,7 +3592,6 @@ def admin_academic_year_settings(request):
     form. The year string is derived from the provided start and end dates.
     """
 
-    from datetime import datetime
     from transcript.models import AcademicYear
 
     # Editing existing year if ``id`` provided in POST or ``edit`` in GET
@@ -3536,31 +3602,64 @@ def admin_academic_year_settings(request):
 
     if request.method == "POST":
         year_id = request.POST.get("id")
-        start = request.POST.get("start_date") or None
-        end = request.POST.get("end_date") or None
+        start_raw = request.POST.get("start_date") or ""
+        end_raw = request.POST.get("end_date") or ""
 
-        year_str = None
-        if start:
-            try:
-                start_year = datetime.strptime(start, "%Y-%m-%d").year
-                end_year = (
-                    datetime.strptime(end, "%Y-%m-%d").year if end else start_year + 1
-                )
-                year_str = f"{start_year}-{end_year}"
-            except ValueError:
-                pass
+        try:
+            start_date = datetime.strptime(start_raw, "%Y-%m-%d").date()
+        except ValueError:
+            start_date = None
 
+        try:
+            end_date = datetime.strptime(end_raw, "%Y-%m-%d").date() if end_raw else None
+        except ValueError:
+            end_date = None
+
+        if not start_date or not end_date:
+            messages.error(request, "Start and end dates are required.")
+            return redirect("admin_academic_year_settings")
+
+        if end_date < start_date:
+            messages.error(request, "End date cannot be earlier than the start date.")
+            return redirect("admin_academic_year_settings")
+
+        end_year = end_date.year
+        year_str = f"{start_date.year}-{end_year}"
+
+        duplicate_qs = AcademicYear.objects.filter(year=year_str)
         if year_id:
-            obj = get_object_or_404(AcademicYear, pk=year_id)
-            obj.year = year_str
-            obj.start_date = start
-            obj.end_date = end
-            obj.save()
-        else:
-            # Ensure only one academic year is active at any time
-            AcademicYear.objects.filter(is_active=True).update(is_active=False)
-            AcademicYear.objects.create(
-                year=year_str, start_date=start, end_date=end, is_active=True
+            duplicate_qs = duplicate_qs.exclude(pk=year_id)
+
+        if duplicate_qs.exists():
+            messages.error(
+                request,
+                "An academic year with the same label already exists. Please adjust the dates.",
+            )
+            return redirect("admin_academic_year_settings")
+
+        try:
+            if year_id:
+                obj = get_object_or_404(AcademicYear, pk=year_id)
+                obj.year = year_str
+                obj.start_date = start_date
+                obj.end_date = end_date
+                obj.save(update_fields=["year", "start_date", "end_date"])
+                messages.success(request, "Academic year updated.")
+            else:
+                # Ensure only one academic year is active at any time
+                with transaction.atomic():
+                    AcademicYear.objects.filter(is_active=True).update(is_active=False)
+                    AcademicYear.objects.create(
+                        year=year_str,
+                        start_date=start_date,
+                        end_date=end_date,
+                        is_active=True,
+                    )
+                messages.success(request, "Academic year added and set as active.")
+        except IntegrityError:
+            messages.error(
+                request,
+                "An academic year with the same label already exists. Please adjust the dates.",
             )
         return redirect("admin_academic_year_settings")
 
@@ -3590,7 +3689,8 @@ def academic_year_archive(request, pk):
     year = get_object_or_404(AcademicYear, pk=pk)
     if request.method == "POST":
         year.is_active = False
-        year.save()
+        year.save(update_fields=["is_active"])
+        messages.success(request, "Academic year archived.")
     return redirect("admin_academic_year_settings")
 
 
@@ -3603,8 +3703,10 @@ def academic_year_restore(request, pk):
 
     year = get_object_or_404(AcademicYear, pk=pk)
     if request.method == "POST":
+        AcademicYear.objects.exclude(pk=year.pk).update(is_active=False)
         year.is_active = True
-        year.save()
+        year.save(update_fields=["is_active"])
+        messages.success(request, "Academic year restored and set as active.")
     return redirect("admin_academic_year_settings")
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -3636,10 +3738,28 @@ def master_data_dashboard(request):
 def admin_approval_flow(request):
     """List all organizations grouped by type for approval flow management."""
     org_types = OrganizationType.objects.filter(is_active=True).order_by("name")
-    orgs_by_type = {
-        ot.name: Organization.objects.filter(org_type=ot, is_active=True).order_by("name")
-        for ot in org_types
-    }
+    active_steps = ApprovalFlowTemplate.objects.filter(
+        organization=OuterRef("pk"),
+        status=ApprovalFlowTemplate.Status.ACTIVE,
+    )
+
+    orgs_by_type = {}
+    for org_type in org_types:
+        org_queryset = (
+            Organization.objects.filter(org_type=org_type, is_active=True)
+            .annotate(
+                approval_step_count=Count(
+                    "approval_flow_templates",
+                    filter=Q(
+                        approval_flow_templates__status=ApprovalFlowTemplate.Status.ACTIVE
+                    ),
+                    distinct=True,
+                ),
+                has_approval_flow=Exists(active_steps),
+            )
+            .order_by("name")
+        )
+        orgs_by_type[org_type.name] = org_queryset
     context = {
         "org_types": org_types,
         "orgs_by_type": orgs_by_type,
@@ -4383,7 +4503,7 @@ from operator import attrgetter
 from core.models import Report  # instead of SubmittedReport
 from emt.models import EventReport
 
-@login_required
+@sidebar_permission_required("reports")
 def admin_reports_view(request):
     try:
         # Use Report instead of SubmittedReport here:
@@ -4404,8 +4524,7 @@ def admin_reports_view(request):
         return HttpResponse(f"An error occurred: {e}", status=500)
 
 
-@login_required
-@admin_required
+@sidebar_permission_required("reports")
 @require_GET
 def admin_reports_api(request):
     """Return filtered report data for the admin reports table."""
@@ -4540,7 +4659,7 @@ def admin_reports_api(request):
 
 
 @login_required
-@admin_required
+@sidebar_permission_required("reports")
 def admin_reports_approve(request, report_id: int):
     """Approve a core Report and redirect back to the reports list.
 
@@ -4555,8 +4674,7 @@ def admin_reports_approve(request, report_id: int):
     return redirect("admin_reports")
 
 
-@login_required
-@admin_required
+@sidebar_permission_required("reports")
 def admin_reports_reject(request, report_id: int):
     """Reject a core Report and redirect back to the reports list.
 
@@ -4570,8 +4688,7 @@ def admin_reports_reject(request, report_id: int):
     return redirect("admin_reports")
 
 
-@login_required
-@admin_required
+@sidebar_permission_required("settings:history")
 def admin_history(request):
     """List activity log entries for administrators.
 
@@ -4636,8 +4753,7 @@ def admin_history(request):
     return render(request, "core/admin_history.html", context)
 
 
-@login_required
-@admin_required
+@sidebar_permission_required("settings:history")
 def admin_history_detail(request, pk):
     """Detailed view of a single activity log entry."""
     log = get_object_or_404(ActivityLog, pk=pk)
@@ -5993,15 +6109,13 @@ def build_organization_queryset(q=None, filters=None):
 # -------------------------
 # Dynamic filter endpoints (AJAX)
 # -------------------------
-@login_required
-@user_passes_test(is_admin)
+@sidebar_permission_required("reports")
 def data_export_filter_view(request):
     """Render the filter/search page template."""
     return render(request, 'core/data_export_filter.html')
 
 
-@login_required
-@user_passes_test(is_admin)
+@sidebar_permission_required("reports")
 def api_org_types(request):
     """Return active organization types for the filter panel."""
     qs = OrganizationType.objects.all().order_by('name')
@@ -6009,8 +6123,7 @@ def api_org_types(request):
     return JsonResponse(data, safe=False)
 
 
-@login_required
-@user_passes_test(is_admin)
+@sidebar_permission_required("reports")
 def api_orgs_by_type(request):
     """
     GET param: org_type_id
@@ -6036,8 +6149,7 @@ from django.views.decorators.http import require_http_methods
 # -------------------------
 # Filter metadata for each category
 # -------------------------
-@login_required
-@user_passes_test(is_admin)
+@sidebar_permission_required("reports")
 def api_filter_meta(request, category):
     """
     Returns metadata to help the frontend render the dynamic filter UI for the given category.
@@ -6102,8 +6214,7 @@ def api_filter_meta(request, category):
 # Unified search endpoint
 # -------------------------
 @csrf_exempt
-@login_required
-@user_passes_test(is_admin)
+@sidebar_permission_required("reports")
 def api_search(request):
     """
     Unified search endpoint.
@@ -6253,8 +6364,7 @@ def api_search(request):
 # Export endpoints (CSV / Excel)
 # -------------------------
 @csrf_exempt
-@login_required
-@user_passes_test(is_admin)
+@sidebar_permission_required("reports")
 def api_export_csv(request):
     """
     Export results as CSV. Accepts same payload as api_search.
@@ -6310,8 +6420,7 @@ def api_export_csv(request):
 
 
 @csrf_exempt
-@login_required
-@user_passes_test(is_admin)
+@sidebar_permission_required("reports")
 def api_export_excel(request):
     """
     Export results as XLSX (requires xlsxwriter).
@@ -6364,8 +6473,7 @@ def api_export_excel(request):
 # -------------------------
 # Quick summary endpoint for badges
 # -------------------------
-@login_required
-@user_passes_test(is_admin)
+@sidebar_permission_required("reports")
 def api_quick_summary(request):
     """Return counts for each category to display small badges in UI."""
     ot = request.GET.get('org_type')
@@ -6421,12 +6529,9 @@ def stop_impersonation(request):
         dashboard_url = '/core-admin/dashboard/'
     return redirect(dashboard_url)
 
-@login_required
+@sidebar_permission_required("user_management")
 def admin_impersonate_user(request, user_id):
     """Start impersonating a user from admin pages."""
-    if not is_admin(request.user):
-        raise PermissionDenied("You are not authorized to impersonate users.")
-
     # Allow impersonation of any existing user regardless of ``is_active`` status.
     # Previously we restricted to ``is_active=True`` which resulted in a 404
     # when attempting to impersonate inactive users from the user management
@@ -6443,11 +6548,9 @@ def admin_impersonate_user(request, user_id):
     next_url = safe_next(request, fallback=reverse('dashboard'))
     return redirect(next_url)
 
-@login_required
+@sidebar_permission_required("user_management")
 def get_recent_users_api(request):
     """Get recently switched users"""
-    if not is_admin(request.user):
-        raise PermissionDenied("Admin access required")
     try:
         # Get recent impersonation history (you might want to store this in a model)
         # For now, returning some sample data
@@ -6466,11 +6569,9 @@ def get_recent_users_api(request):
         return JsonResponse({'error': str(e)}, status=500)
 
     
-@login_required
+@sidebar_permission_required("user_management")
 def switch_user_view(request):
     """Display the switch user interface"""
-    if not is_admin(request.user):
-        raise PermissionDenied("Admin access required")
     users = User.objects.filter(is_active=True, last_login__isnull=False).select_related().order_by('username')
     
     # Get current impersonated user if any
@@ -6489,11 +6590,9 @@ def switch_user_view(request):
     }
     return render(request, 'core/switch_user.html', context)
 
-@login_required
+@sidebar_permission_required("user_management")
 def search_users_api(request):
     """API endpoint for quick user search"""
-    if not is_admin(request.user):
-        raise PermissionDenied("Admin access required")
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -6531,12 +6630,10 @@ def search_users_api(request):
     
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
-@login_required
 @require_POST
+@sidebar_permission_required("user_management")
 def impersonate_user(request):
     """Start impersonating a user"""
-    if not is_admin(request.user):
-        raise PermissionDenied("Admin access required")
     try:
         data = json.loads(request.body)
         user_id = data.get('user_id')

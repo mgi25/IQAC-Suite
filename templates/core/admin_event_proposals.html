@@ -1,86 +1,189 @@
 {% extends "base.html" %}
 {% load static %}
+
+{% block title %}Event Proposals{% endblock %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{% static 'core/css/admin_event_proposals.css' %}?v=2.0">
+{% endblock %}
+
 {% block content %}
-<link rel="stylesheet" href="{% static 'core/css/admin_event_proposals.css' %}">
-<div class="container admin-proposals-container">
-    <h1 class="proposals-title">Event Proposals</h1>
-    <form method="get" class="proposals-filter-form">
-        <input type="text" name="q" placeholder="Search by title, user, or organization..." value="{{ request.GET.q|default:'' }}">
-        <select name="status">
-            <option value="">All Status</option>
-            <option value="submitted" {% if request.GET.status == "submitted" %}selected{% endif %}>Submitted</option>
-            <option value="under_review" {% if request.GET.status == "under_review" %}selected{% endif %}>Under Review</option>
-            <option value="approved" {% if request.GET.status == "approved" %}selected{% endif %}>Approved</option>
-            <option value="rejected" {% if request.GET.status == "rejected" %}selected{% endif %}>Rejected</option>
-            <option value="returned" {% if request.GET.status == "returned" %}selected{% endif %}>Returned</option>
-            <option value="finalized" {% if request.GET.status == "finalized" %}selected{% endif %}>Finalized</option>
-        </select>
-        <button type="submit" class="btn btn-primary">Filter</button>
-    </form>
-
-    <!-- Scrollable table with sticky headers -->
-    <div class="table-responsive fixed-header-table">
-        <table class="proposals-table">
-            <thead>
-                <tr>
-                    <th>S.No</th>
-                    <th>Title</th>
-                    <th>Submitted By</th>
-                    <th>Organization</th>
-                    <th>Date</th>
-                    <th>Time</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for p in proposals %}
-                <tr>
-                    <td>{{ forloop.counter }}</td>
-                    <td>
-                        <a href="#" class="proposal-title-link" data-id="{{ p.id }}" onclick="showProposalModal('{{ p.id }}')">
-                            {{ p.event_title|truncatechars:30 }}
-                        </a>
-                    </td>
-                    <td>{{ p.submitted_by.get_full_name|default:p.submitted_by.username }}</td>
-                    <td>
-                        {% if p.organization %}
-                            {{ p.organization.org_type.name }}: {{ p.organization.name }}
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-                    <!-- Separated Date and Time -->
-                    <td>{{ p.created_at|date:"d-m-Y" }}</td>
-                    <td>{{ p.created_at|time:"H:i" }}</td>
-                    <td>
-                        <span class="status-badge status-{{ p.status }}">
-                            {{ p.get_status_display }}
-                        </span>
-                    </td>
-                    <td>
-                        <a href="{% url 'admin_proposal_detail' p.id %}" class="btn-action btn-view">View</a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="8" style="text-align:center;">No proposals found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="ems-dashboard proposals-page" data-page="event-proposals">
+  <header class="topbar">
+    <div class="topbar-copy">
+      <h1>Event Proposals</h1>
+      <p class="topbar-subtext">Track submissions and move proposals forward with confidence.</p>
     </div>
-</div>
+    <div class="topbar-meta">
+      <span class="meta-pill highlight">
+        <i class="fa-solid fa-database" aria-hidden="true"></i>
+        {{ total_count }} proposal{% if total_count|default:0 != 1 %}s{% endif %}
+      </span>
+      {% if request.GET.q or request.GET.status %}
+      <span class="meta-pill">
+        <i class="fa-solid fa-filter-circle-xmark" aria-hidden="true"></i>
+        Filtered view
+      </span>
+      {% endif %}
+    </div>
+  </header>
 
-<!-- Modal for Proposal Detail -->
-<div id="proposalModal" class="modal-bg" style="display:none;">
-    <div class="modal-content">
-        <span class="modal-close" onclick="hideProposalModal()">&times;</span>
-        <h2 id="modal-title">Event Title</h2>
-        <div id="modal-details">
-            <!-- JS populates this -->
+  <section class="summary-section" aria-label="Proposal status overview" role="list">
+    <div class="summary-card summary-total" role="listitem">
+      <span class="label">Visible proposals</span>
+      <span class="value">{{ total_count }}</span>
+      <span class="hint">Results after applying current filters</span>
+    </div>
+    {% for item in status_summary %}
+    <div class="summary-card summary-{{ item.style }}" role="listitem">
+      <span class="label">{{ item.label }}</span>
+      <span class="value">{{ item.count }}</span>
+      {% if item.hint %}
+      <span class="hint">{{ item.hint }}</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </section>
+
+  <section class="filter-card" aria-label="Filter proposals">
+    <form method="get" class="filter-form" id="proposalFilters">
+      <div class="field">
+        <label for="proposalSearch">Search</label>
+        <div class="input-icon">
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+          <input type="text"
+                 id="proposalSearch"
+                 name="q"
+                 value="{{ request.GET.q|default:'' }}"
+                 placeholder="Search by title, user, or organization">
         </div>
+      </div>
+
+      <div class="field">
+        <label for="statusFilter">Status</label>
+        <div class="select-wrapper">
+          <select id="statusFilter" name="status">
+            <option value="">All statuses</option>
+            {% for status in status_choices %}
+              <option value="{{ status.0 }}" {% if request.GET.status == status.0 %}selected{% endif %}>
+                {{ status.1 }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="field actions">
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-filter" aria-hidden="true"></i>
+          Apply filters
+        </button>
+        {% if request.GET.q or request.GET.status %}
+        <a href="{% url 'admin_event_proposals' %}" class="btn btn-ghost">
+          <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+          Reset
+        </a>
+        {% endif %}
+      </div>
+    </form>
+  </section>
+
+  <section class="proposals-card" aria-label="Proposal list">
+    <div class="card-header">
+      <div class="card-copy">
+        <h2>Latest submissions</h2>
+        <p>Chronological log of proposals with quick access to review details.</p>
+      </div>
+      <span class="meta-pill">
+        <i class="fa-regular fa-clock" aria-hidden="true"></i>
+        {% now "M j, Y · H:i" %}
+      </span>
     </div>
+
+    <div class="table-wrapper">
+      <table class="proposals-table">
+        <thead>
+          <tr>
+            <th scope="col">S.No</th>
+            <th scope="col">Title</th>
+            <th scope="col">Submitted By</th>
+            <th scope="col">Organization</th>
+            <th scope="col">Date</th>
+            <th scope="col">Time</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="actions-col">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in proposals %}
+          <tr>
+            <td data-title="S.No">{{ forloop.counter }}</td>
+            <td data-title="Title">
+              <button type="button"
+                      class="proposal-title-link"
+                      data-id="{{ p.id }}"
+                      onclick="showProposalModal('{{ p.id }}')">
+                <i class="fa-regular fa-eye" aria-hidden="true"></i>
+                {{ p.event_title|truncatechars:45 }}
+              </button>
+            </td>
+            <td data-title="Submitted By">
+              {{ p.submitted_by.get_full_name|default:p.submitted_by.username }}
+            </td>
+            <td data-title="Organization">
+              {% if p.organization %}
+                {{ p.organization.org_type.name }} · {{ p.organization.name }}
+              {% else %}
+                <span class="muted">—</span>
+              {% endif %}
+            </td>
+            <td data-title="Date">{{ p.created_at|date:"M d, Y" }}</td>
+            <td data-title="Time">{{ p.created_at|time:"H:i" }}</td>
+            <td data-title="Status">
+              <span class="status-badge status-{{ p.status }}">
+                {{ p.get_status_display }}
+              </span>
+            </td>
+            <td data-title="Action" class="actions-cell">
+              <a href="{% url 'admin_proposal_detail' p.id %}" class="btn-action btn-view">
+                <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                View
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8">
+              <div class="empty-state">
+                <i class="fa-regular fa-folder-open" aria-hidden="true"></i>
+                <div>No proposals match your filters yet.</div>
+                <p>Try adjusting the search keywords or status filters to broaden the results.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 </div>
+
+<div id="proposalModal"
+     class="proposal-modal"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="modal-title"
+     aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <button type="button" class="modal-close" aria-label="Close quick view" onclick="hideProposalModal()">
+      <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+    </button>
+    <h2 id="modal-title">Event Title</h2>
+    <div id="modal-details" class="modal-detail-list">
+      <!-- JS populates this -->
+    </div>
+  </div>
+</div>
+
 <script src="{% static 'core/js/admin_event_proposals.js' %}"></script>
 {% endblock %}

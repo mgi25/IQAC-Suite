@@ -46,6 +46,64 @@ def admin_required(view_func):
     return _wrapped_view
 
 
+def _expand_sidebar_ids(items):
+    """Return a set with sidebar ids expanded to include parents/aliases."""
+
+    expanded = set()
+    for item in items:
+        if not item:
+            continue
+        expanded.add(item)
+        if isinstance(item, str) and ":" in item:
+            parent, child = item.split(":", 1)
+            expanded.add(parent)
+            expanded.add(child)
+    return expanded
+
+
+def sidebar_permission_required(item_id):
+    """Ensure the user can access a specific sidebar item."""
+
+    if isinstance(item_id, (list, tuple, set)):
+        required_ids = _expand_sidebar_ids(item_id)
+    else:
+        required_ids = _expand_sidebar_ids([item_id])
+
+    def decorator(view_func):
+        @wraps(view_func)
+        @login_required
+        def _wrapped_view(request, *args, **kwargs):
+            if request.user.is_superuser or getattr(request.user, "is_staff", False) or (
+                request.session.get("role", "").lower() == "admin"
+            ):
+                return view_func(request, *args, **kwargs)
+
+            try:
+                from .models import SidebarPermission
+
+                allowed = SidebarPermission.get_allowed_items(request.user)
+            except Exception:
+                logger.exception(
+                    "Failed to resolve sidebar permissions for user %s",
+                    getattr(request.user, "id", None),
+                )
+                raise PermissionDenied("Sidebar access required")
+
+            if allowed == "ALL":
+                return view_func(request, *args, **kwargs)
+
+            allowed_ids = _expand_sidebar_ids(allowed)
+
+            if required_ids & allowed_ids:
+                return view_func(request, *args, **kwargs)
+
+            raise PermissionDenied("Sidebar access required")
+
+        return _wrapped_view
+
+    return decorator
+
+
 def popso_manager_required(view_func):
     """
     Decorator that checks if user is either a superuser or has an active PO/PSO assignment
