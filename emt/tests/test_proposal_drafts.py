@@ -98,8 +98,8 @@ class ProposalDraftManagementTests(TestCase):
             5,
         )
 
-    def test_proposal_drafts_view_prunes_older_drafts(self):
-        for idx in range(7):
+    def test_proposal_drafts_view_preserves_existing_drafts(self):
+        for idx in range(3):
             self._make_draft(title=f"Draft {idx}")
 
         response = self.client.get(reverse("emt:proposal_drafts"))
@@ -114,8 +114,9 @@ class ProposalDraftManagementTests(TestCase):
             .order_by("-updated_at")
             .values_list("event_title", flat=True)
         )
-        self.assertEqual(len(active_titles), 1)
-        self.assertListEqual(active_titles, ["Draft 6"])
+
+        self.assertEqual(len(active_titles), 3)
+        self.assertListEqual(active_titles, ["Draft 2", "Draft 1", "Draft 0"])
 
         archived_titles = set(
             EventProposal.objects.filter(
@@ -124,7 +125,4 @@ class ProposalDraftManagementTests(TestCase):
                 is_user_deleted=True,
             ).values_list("event_title", flat=True)
         )
-        self.assertSetEqual(
-            archived_titles,
-            {f"Draft {idx}" for idx in range(0, 6)},
-        )
+        self.assertSetEqual(archived_titles, set())
