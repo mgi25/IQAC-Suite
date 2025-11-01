@@ -3559,6 +3559,17 @@ def admin_academic_year_settings(request):
         end_year = end_date.year
         year_str = f"{start_date.year}-{end_year}"
 
+        duplicate_qs = AcademicYear.objects.filter(year=year_str)
+        if year_id:
+            duplicate_qs = duplicate_qs.exclude(pk=year_id)
+
+        if duplicate_qs.exists():
+            messages.error(
+                request,
+                "An academic year with the same label already exists. Please adjust the dates.",
+            )
+            return redirect("admin_academic_year_settings")
+
         try:
             if year_id:
                 obj = get_object_or_404(AcademicYear, pk=year_id)
@@ -3569,13 +3580,14 @@ def admin_academic_year_settings(request):
                 messages.success(request, "Academic year updated.")
             else:
                 # Ensure only one academic year is active at any time
-                AcademicYear.objects.filter(is_active=True).update(is_active=False)
-                AcademicYear.objects.create(
-                    year=year_str,
-                    start_date=start_date,
-                    end_date=end_date,
-                    is_active=True,
-                )
+                with transaction.atomic():
+                    AcademicYear.objects.filter(is_active=True).update(is_active=False)
+                    AcademicYear.objects.create(
+                        year=year_str,
+                        start_date=start_date,
+                        end_date=end_date,
+                        is_active=True,
+                    )
                 messages.success(request, "Academic year added and set as active.")
         except IntegrityError:
             messages.error(
