@@ -59,7 +59,7 @@ class BulkUploadClassActivationTests(TestCase):
 
         org_type = OrganizationType.objects.create(name="Department")
         self.org = Organization.objects.create(name="Org One", org_type=org_type)
-        OrganizationRole.objects.create(organization=self.org, name="student")
+        OrganizationRole.objects.create(organization=self.org, name="Student")
 
     def test_bulk_upload_reactivates_archived_class(self):
         cls = Class.objects.create(
@@ -91,6 +91,7 @@ class BulkUploadClassActivationTests(TestCase):
 
         cls.refresh_from_db()
         self.assertTrue(cls.is_active)
+        self.assertEqual(cls.students.count(), 1)
 
 
 class AdminUserEditFormsetTests(TestCase):
