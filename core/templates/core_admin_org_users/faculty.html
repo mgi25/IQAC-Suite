@@ -14,11 +14,7 @@
       {% csrf_token %}
       <input type="hidden" name="upload_type" value="faculty">
       <div class="row g-3">
-        <div class="col-sm-4">
-          <label class="form-label">Academic Year</label>
-          <input type="text" name="academic_year" class="form-control" placeholder="2025-2026" required>
-        </div>
-        <div class="col-sm-8">
+        <div class="col-sm-12">
           <label class="form-label">CSV File</label>
           <input type="file" name="csv_file" accept=".csv" class="form-control" required>
         </div>

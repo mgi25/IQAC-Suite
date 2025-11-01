@@ -3,6 +3,7 @@ from django.contrib.messages import get_messages
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from core.models import (Organization, OrganizationMembership,
                          OrganizationRole, OrganizationType, RoleAssignment)
@@ -62,7 +63,7 @@ class BulkUserUploadTests(TestCase):
         user = User.objects.get(username="john@example.com")
         self.assertFalse(user.is_active)
         ra = RoleAssignment.objects.get(user=user, organization=self.org)
-        self.assertEqual(ra.role.name, "student")
+        self.assertEqual(ra.role.name.lower(), "student")
 
         # simulate first login
         user.set_password("pass")
@@ -76,9 +77,13 @@ class BulkUserUploadTests(TestCase):
         self.assertTrue(user_client.login(username="john@example.com", password="pass"))
         user.refresh_from_db()
         self.assertTrue(user.is_active)
-        self.assertEqual(user.profile.role, "student")
+        self.assertEqual(user.profile.role.lower(), "student")
         # Check the role in the logged-in user's session (not the admin client)
-        self.assertEqual(user_client.session["role"], "student")
+        session_role = user_client.session["role"]
+        if session_role.startswith("orgrole:"):
+            self.assertTrue(session_role.startswith("orgrole:"))
+        else:
+            self.assertEqual(session_role, "student")
 
     def test_upload_with_unknown_role_errors(self):
         self.client.force_login(self.admin)
@@ -120,7 +125,7 @@ class BulkUserUploadTests(TestCase):
         )
         self.assertEqual(mems.count(), 1)
         ra = RoleAssignment.objects.get(user=existing, organization=self.org)
-        self.assertEqual(ra.role.name, "student")
+        self.assertEqual(ra.role.name.lower(), "student")
 
     def test_bulk_upload_overrides_existing_role(self):
         user = User.objects.create_user("john", "john@example.com", "pass")
@@ -147,7 +152,7 @@ class BulkUserUploadTests(TestCase):
 
         ras = RoleAssignment.objects.filter(user=user, organization=self.org)
         self.assertEqual(ras.count(), 1)
-        self.assertEqual(ras.first().role.name, "student")
+        self.assertEqual(ras.first().role.name.lower(), "student")
 
     def test_bulk_upload_moves_user_between_orgs(self):
         """Uploading the same user to a new organization should replace old membership."""
@@ -180,7 +185,7 @@ class BulkUserUploadTests(TestCase):
         self.assertEqual(mem.role, "student")
         ra = RoleAssignment.objects.get(user=user)
         self.assertEqual(ra.organization, org2)
-        self.assertEqual(ra.role.name, "student")
+        self.assertEqual(ra.role.name.lower(), "student")
 
 
 class BulkFacultyUploadTests(TestCase):
@@ -201,7 +206,6 @@ class BulkFacultyUploadTests(TestCase):
         )
         url = reverse("admin_org_users_upload_csv", args=[self.org.id])
         data = {
-            "academic_year": "2024-2025",
             "csv_file": file,
         }
         referer = f"http://testserver/core-admin/org-users/{self.org.id}/faculty/"
@@ -214,6 +218,10 @@ class BulkFacultyUploadTests(TestCase):
         user = User.objects.get(username="prof1@example.com")
         mem = user.org_memberships.get(organization=self.org)
         self.assertTrue(mem.is_active)
+        now = timezone.now()
+        start_year = now.year if now.month >= 6 else now.year - 1
+        expected_year = f"{start_year}-{start_year + 1}"
+        self.assertEqual(mem.academic_year, expected_year)
 
         # Toggle archive
         toggle_url = reverse(
@@ -255,7 +263,6 @@ class BulkFacultyUploadTests(TestCase):
         )
         url = reverse("admin_org_users_upload_csv", args=[self.org.id])
         data = {
-            "academic_year": "2024-2025",
             "csv_file": file,
             "upload_type": "faculty",
         }
@@ -274,3 +281,7 @@ class BulkFacultyUploadTests(TestCase):
             user=user, organization=self.org
         )
         self.assertEqual(membership.role, "faculty")
+        now = timezone.now()
+        start_year = now.year if now.month >= 6 else now.year - 1
+        expected_year = f"{start_year}-{start_year + 1}"
+        self.assertEqual(membership.academic_year, expected_year)

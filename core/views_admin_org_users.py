@@ -9,6 +9,7 @@ from django.db.models import Count
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
 from core.models import (Class, Organization, OrganizationMembership,
                          OrganizationRole, Profile, RoleAssignment)
@@ -37,6 +38,22 @@ def _split_name(fullname: str):
     if len(parts) == 1:
         return parts[0], ""
     return " ".join(parts[:-1]), parts[-1]
+
+
+def _default_academic_year():
+    """Return the active academic year string (fallback to current cycle)."""
+    try:
+        from transcript.models import get_active_academic_year
+
+        ay = get_active_academic_year()
+        if ay and ay.year:
+            return ay.year
+    except Exception:
+        pass
+
+    now = timezone.now()
+    start_year = now.year if now.month >= 6 else now.year - 1
+    return f"{start_year}-{start_year + 1}"
 
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -162,8 +179,11 @@ def upload_csv(request, org_id):
             org_id=org.id,
         )
 
-    ay = form.cleaned_data["academic_year"].strip()
+    ay = (form.cleaned_data.get("academic_year") or "").strip()
     class_name = (form.cleaned_data.get("class_name") or "").strip()
+    if not is_faculty and not ay:
+        messages.error(request, "Please provide an academic year.")
+        return redirect("admin_org_users_students", org_id=org.id)
     if not is_faculty and not class_name:
         messages.error(request, "Please provide a class for the students.")
         return redirect("admin_org_users_students", org_id=org.id)
@@ -179,6 +199,10 @@ def upload_csv(request, org_id):
         if not cls.is_active:
             cls.is_active = True
             cls.save(update_fields=["is_active"])
+
+    faculty_default_year = ""
+    if is_faculty and not ay:
+        faculty_default_year = _default_academic_year()
 
     f = request.FILES["csv_file"]
     if not f.name.lower().endswith(".csv"):
@@ -238,8 +262,13 @@ def upload_csv(request, org_id):
         )
 
     for role_name in roles_in_csv:
-        OrganizationRole.objects.get_or_create(organization=org, name=role_name)
+        role_exists = OrganizationRole.objects.filter(
+            organization=org, name__iexact=role_name
+        ).exists()
+        if not role_exists:
+            OrganizationRole.objects.create(organization=org, name=role_name)
 
+    used_academic_years = set()
     with transaction.atomic():
         for i, row in enumerate(rows, start=2):
             reg = (row.get(id_field) or "").strip()
@@ -313,30 +342,45 @@ def upload_csv(request, org_id):
                     profile.register_no = reg
                     profile.save(update_fields=["register_no"])
 
+            membership_year = ay
+            if is_faculty and not membership_year:
+                membership_year = (
+                    OrganizationMembership.objects.filter(
+                        user=user,
+                        organization=org,
+                        role=org_role.name,
+                    )
+                    .order_by("-academic_year")
+                    .values_list("academic_year", flat=True)
+                    .first()
+                ) or faculty_default_year or _default_academic_year()
+
+            used_academic_years.add(membership_year)
+
             # Prevent duplicate memberships for the same role across organizations
             OrganizationMembership.objects.filter(
                 user=user,
-                role=org_role.name,
-                academic_year=ay,
+                role=role,
+                academic_year=membership_year,
             ).exclude(organization=org).delete()
             RoleAssignment.objects.filter(
                 user=user,
                 role__name=org_role.name,
-                academic_year=ay,
+                academic_year=membership_year,
             ).exclude(organization=org).delete()
 
             mem, mem_created = OrganizationMembership.objects.get_or_create(
                 user=user,
                 organization=org,
-                academic_year=ay,
-                defaults={"role": org_role.name, "is_primary": True, "is_active": True},
+                academic_year=membership_year,
+                defaults={"role": role, "is_primary": True, "is_active": True},
             )
             if mem_created:
                 memberships_created += 1
             else:
                 fields_to_update = []
-                if mem.role != org_role.name:
-                    mem.role = org_role.name
+                if mem.role != role:
+                    mem.role = role
                     fields_to_update.append("role")
                 if not mem.is_active:
                     mem.is_active = True
@@ -353,13 +397,13 @@ def upload_csv(request, org_id):
                 organization=org,
                 role=org_role,
                 defaults={
-                    "academic_year": ay,
+                    "academic_year": membership_year,
                     "class_name": class_name if org_role.name == "student" else None,
                 },
             )
 
-            if profile.role != org_role.name:
-                profile.role = org_role.name
+            if profile.role != role:
+                profile.role = role
                 profile.save(update_fields=["role"])
 
             if org_role.name == "student" and cls is not None:
@@ -374,10 +418,16 @@ def upload_csv(request, org_id):
             + ("" if len(errors) <= 8 else f"\n(+{len(errors) - 8} more)"),
         )
     if is_faculty:
+        year_info = ""
+        if used_academic_years:
+            if len(used_academic_years) == 1:
+                year_info = f" ({next(iter(used_academic_years))})"
+            else:
+                year_info = " (" + ", ".join(sorted(used_academic_years)) + ")"
         messages.success(
             request,
             (
-                f"CSV processed for {org.name} ({ay}). Users created: {users_created}, "
+                f"CSV processed for {org.name}{year_info}. Users created: {users_created}, "
                 f"Users updated: {users_updated}, Memberships created: {memberships_created}, "
                 f"Memberships updated: {memberships_updated}, Skipped: {skipped}."
             ),
