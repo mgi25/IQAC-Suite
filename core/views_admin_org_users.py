@@ -398,7 +398,7 @@ def upload_csv(request, org_id):
                 role=org_role,
                 defaults={
                     "academic_year": membership_year,
-                    "class_name": class_name if org_role.name == "student" else None,
+                    "class_name": class_name if role == "student" else None,
                 },
             )
 
@@ -406,7 +406,7 @@ def upload_csv(request, org_id):
                 profile.role = role
                 profile.save(update_fields=["role"])
 
-            if org_role.name == "student" and cls is not None:
+            if role == "student" and cls is not None:
                 student_obj, _ = EmtStudent.objects.get_or_create(user=user)
                 cls.students.add(student_obj)
 
