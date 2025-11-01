@@ -32,14 +32,13 @@
     <h3 class="mb-3">{% if show_archived %}Archived Faculty{% else %}Uploaded Faculty{% endif %}</h3>
     <table class="table">
       <thead>
-        <tr><th>Name</th><th>Email</th><th>Academic Year</th><th>Actions</th></tr>
+        <tr><th>Name</th><th>Email</th><th>Actions</th></tr>
       </thead>
       <tbody>
         {% for mem in faculty %}
         <tr>
           <td>{{ mem.user.get_full_name|default:mem.user.username }}</td>
           <td>{{ mem.user.email }}</td>
-          <td>{{ mem.academic_year }}</td>
           <td>
             <a href="{% url 'admin_org_users_faculty_detail' org.id mem.id %}">View</a>
             <form method="post" action="{% url 'admin_org_users_faculty_toggle' org.id mem.id %}{% if show_archived %}?archived=1{% endif %}" style="display:inline;">
@@ -52,7 +51,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="4" class="text-center text-muted">No {% if show_archived %}archived {% endif %}faculty</td>
+          <td colspan="3" class="text-center text-muted">No {% if show_archived %}archived {% endif %}faculty</td>
         </tr>
         {% endfor %}
       </tbody>
