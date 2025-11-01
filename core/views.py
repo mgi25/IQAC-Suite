@@ -2555,19 +2555,86 @@ def admin_user_deactivate(request, user_id):
 
 @user_passes_test(lambda u: u.is_superuser)
 def admin_event_proposals(request):
-    proposals = EventProposal.objects.select_related('submitted_by', 'organization__org_type').all().order_by("-created_at")
+    proposals = (
+        EventProposal.objects
+        .select_related('submitted_by', 'organization__org_type')
+        .all()
+        .order_by("-created_at")
+    )
+
     q = request.GET.get("q", "").strip()
     status = request.GET.get("status", "").strip()
+
     if q:
         proposals = proposals.filter(
-            Q(event_title__icontains=q) |
-            Q(submitted_by__username__icontains=q) |
-            Q(organization__name__icontains=q) |
-            Q(organization__org_type__name__icontains=q)
+            Q(event_title__icontains=q)
+            | Q(submitted_by__username__icontains=q)
+            | Q(organization__name__icontains=q)
+            | Q(organization__org_type__name__icontains=q)
         )
+
     if status:
         proposals = proposals.filter(status=status)
-    return render(request, "core/admin_event_proposals.html", {"proposals": proposals})
+
+    total_count = proposals.count()
+
+    status_totals = {key: 0 for key, _ in EventProposal.Status.choices}
+    for row in proposals.values("status").annotate(total=Count("id")):
+        status_totals[row["status"]] = row["total"]
+
+    status_labels = {key: label for key, label in EventProposal.Status.choices}
+
+    status_hints = {
+        EventProposal.Status.SUBMITTED: "Awaiting triage",
+        EventProposal.Status.UNDER_REVIEW: "In approval flow",
+        EventProposal.Status.WAITING: "Pending stakeholder action",
+        EventProposal.Status.APPROVED: "Ready for execution",
+        EventProposal.Status.REJECTED: "Declined proposals",
+        EventProposal.Status.RETURNED: "Needs revision",
+        EventProposal.Status.FINALIZED: "Completed and archived",
+        EventProposal.Status.DRAFT: "Not yet submitted",
+    }
+
+    status_styles = {
+        EventProposal.Status.SUBMITTED: "submitted",
+        EventProposal.Status.UNDER_REVIEW: "under-review",
+        EventProposal.Status.WAITING: "waiting",
+        EventProposal.Status.APPROVED: "approved",
+        EventProposal.Status.REJECTED: "rejected",
+        EventProposal.Status.RETURNED: "returned",
+        EventProposal.Status.FINALIZED: "finalized",
+        EventProposal.Status.DRAFT: "draft",
+    }
+
+    status_order = [
+        EventProposal.Status.SUBMITTED,
+        EventProposal.Status.UNDER_REVIEW,
+        EventProposal.Status.WAITING,
+        EventProposal.Status.APPROVED,
+        EventProposal.Status.REJECTED,
+        EventProposal.Status.RETURNED,
+        EventProposal.Status.FINALIZED,
+    ]
+
+    status_summary = [
+        {
+            "key": key,
+            "label": status_labels.get(key, key.replace("_", " ").title()),
+            "count": status_totals.get(key, 0),
+            "hint": status_hints.get(key, ""),
+            "style": status_styles.get(key, "default"),
+        }
+        for key in status_order
+    ]
+
+    context = {
+        "proposals": proposals,
+        "total_count": total_count,
+        "status_summary": status_summary,
+        "status_choices": EventProposal.Status.choices,
+    }
+
+    return render(request, "core/admin_event_proposals.html", context)
 
 @user_passes_test(lambda u: u.is_superuser)
 def event_proposal_json(request, proposal_id):
