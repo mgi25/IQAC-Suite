@@ -64,13 +64,16 @@ def _expand_sidebar_ids(items):
 def sidebar_permission_required(item_id):
     """Ensure the user can access a specific sidebar item."""
 
-    required_ids = _expand_sidebar_ids([item_id])
+    if isinstance(item_id, (list, tuple, set)):
+        required_ids = _expand_sidebar_ids(item_id)
+    else:
+        required_ids = _expand_sidebar_ids([item_id])
 
     def decorator(view_func):
         @wraps(view_func)
         @login_required
         def _wrapped_view(request, *args, **kwargs):
-            if request.user.is_superuser or (
+            if request.user.is_superuser or getattr(request.user, "is_staff", False) or (
                 request.session.get("role", "").lower() == "admin"
             ):
                 return view_func(request, *args, **kwargs)
