@@ -160,6 +160,27 @@ class SidebarPermissionsViewTests(TestCase):
         self.admin = User.objects.create_superuser("admin", "admin@example.com", "pass")
         self.client.login(username="admin", password="pass")
 
+    def test_non_superuser_requires_sidebar_permission(self):
+        staff = User.objects.create_user("staff", password="pass")
+
+        self.client.logout()
+        self.client.login(username="staff", password="pass")
+
+        response = self.client.get(reverse("admin_sidebar_permissions"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_non_superuser_with_sidebar_permission_can_access(self):
+        staff = User.objects.create_user("staff2", password="pass")
+        SidebarPermission.objects.create(
+            user=staff, items=["settings:sidebar_permissions"]
+        )
+
+        self.client.logout()
+        self.client.login(username="staff2", password="pass")
+
+        response = self.client.get(reverse("admin_sidebar_permissions"))
+        self.assertEqual(response.status_code, 200)
+
     def test_assign_permission_to_user(self):
         target = User.objects.create_user("dave", password="pass")
         url = reverse("admin_sidebar_permissions")
@@ -199,6 +220,27 @@ class SidebarPermissionsAPITests(TestCase):
             "apiadmin", "api@example.com", "pass"
         )
         self.client.login(username="apiadmin", password="pass")
+
+    def test_api_requires_sidebar_permission_for_non_superuser(self):
+        user = User.objects.create_user("limited", password="pass")
+        self.client.logout()
+        self.client.login(username="limited", password="pass")
+
+        url = reverse("api_get_sidebar_permissions")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_api_allows_user_with_sidebar_permission(self):
+        user = User.objects.create_user("withperm", password="pass")
+        SidebarPermission.objects.create(
+            user=user, items=["settings:sidebar_permissions"]
+        )
+        self.client.logout()
+        self.client.login(username="withperm", password="pass")
+
+        url = reverse("api_get_sidebar_permissions")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
 
     def test_api_save_user_success(self):
         url = reverse("api_save_sidebar_permissions")
