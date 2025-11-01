@@ -6,8 +6,14 @@ from django.test import Client, RequestFactory, TestCase
 from django.urls import reverse
 
 from core.context_processors import sidebar_permissions
-from core.models import (Organization, OrganizationRole, OrganizationType,
-                         RoleAssignment, SidebarPermission)
+from core.models import (
+    ActivityLog,
+    Organization,
+    OrganizationRole,
+    OrganizationType,
+    RoleAssignment,
+    SidebarPermission,
+)
 from core.navigation import SIDEBAR_ITEM_IDS
 
 
@@ -211,6 +217,63 @@ class SidebarPermissionsViewTests(TestCase):
         for u in (u1, u2):
             perm = SidebarPermission.objects.get(user=u)
             self.assertEqual(perm.items, ["dashboard"])
+
+    def test_admin_reports_view_requires_permission(self):
+        staff = User.objects.create_user("reports_no_access", password="pass")
+        self.client.logout()
+        self.client.login(username="reports_no_access", password="pass")
+
+        response = self.client.get(reverse("admin_reports"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_reports_view_allows_with_permission(self):
+        staff = User.objects.create_user("reports_with_access", password="pass")
+        SidebarPermission.objects.create(user=staff, items=["reports"])
+        self.client.logout()
+        self.client.login(username="reports_with_access", password="pass")
+
+        response = self.client.get(reverse("admin_reports"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_admin_reports_api_respects_sidebar_permission(self):
+        staff = User.objects.create_user("reports_api", password="pass")
+        self.client.logout()
+        self.client.login(username="reports_api", password="pass")
+
+        response = self.client.get(reverse("admin_reports_api"))
+        self.assertEqual(response.status_code, 403)
+
+        SidebarPermission.objects.create(user=staff, items=["reports"])
+        response = self.client.get(reverse("admin_reports_api"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_admin_history_views_require_permission(self):
+        staff = User.objects.create_user("history_limited", password="pass")
+        self.client.logout()
+        self.client.login(username="history_limited", password="pass")
+
+        history_url = reverse("admin_history")
+        self.assertEqual(self.client.get(history_url).status_code, 403)
+
+        log = ActivityLog.objects.create(user=self.admin, action="GET /core-admin/history/")
+        detail_url = reverse("admin_history_detail", args=[log.id])
+        self.assertEqual(self.client.get(detail_url).status_code, 403)
+
+    def test_admin_history_views_allow_with_permission(self):
+        staff = User.objects.create_user("history_allowed", password="pass")
+        SidebarPermission.objects.create(
+            user=staff,
+            items=["settings:history"],
+        )
+        log = ActivityLog.objects.create(user=self.admin, action="GET /core-admin/history/")
+
+        self.client.logout()
+        self.client.login(username="history_allowed", password="pass")
+
+        history_url = reverse("admin_history")
+        detail_url = reverse("admin_history_detail", args=[log.id])
+        self.assertEqual(self.client.get(history_url).status_code, 200)
+        self.assertEqual(self.client.get(detail_url).status_code, 200)
 
 
 class SidebarPermissionsAPITests(TestCase):

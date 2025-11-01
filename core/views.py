@@ -59,7 +59,6 @@ from .models import (
 )
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
-from .decorators import admin_required
 from .models import FacultyMeeting
 from .forms import CDLRequestForm, CertificateBatchUploadForm, CDLMessageForm
 from usermanagement.models import JoinRequest
@@ -4437,7 +4436,7 @@ from operator import attrgetter
 from core.models import Report  # instead of SubmittedReport
 from emt.models import EventReport
 
-@login_required
+@sidebar_permission_required("reports")
 def admin_reports_view(request):
     try:
         # Use Report instead of SubmittedReport here:
@@ -4458,8 +4457,7 @@ def admin_reports_view(request):
         return HttpResponse(f"An error occurred: {e}", status=500)
 
 
-@login_required
-@admin_required
+@sidebar_permission_required("reports")
 @require_GET
 def admin_reports_api(request):
     """Return filtered report data for the admin reports table."""
@@ -4594,7 +4592,7 @@ def admin_reports_api(request):
 
 
 @login_required
-@admin_required
+@sidebar_permission_required("reports")
 def admin_reports_approve(request, report_id: int):
     """Approve a core Report and redirect back to the reports list.
 
@@ -4609,8 +4607,7 @@ def admin_reports_approve(request, report_id: int):
     return redirect("admin_reports")
 
 
-@login_required
-@admin_required
+@sidebar_permission_required("reports")
 def admin_reports_reject(request, report_id: int):
     """Reject a core Report and redirect back to the reports list.
 
@@ -4624,8 +4621,7 @@ def admin_reports_reject(request, report_id: int):
     return redirect("admin_reports")
 
 
-@login_required
-@admin_required
+@sidebar_permission_required("settings:history")
 def admin_history(request):
     """List activity log entries for administrators.
 
@@ -4690,8 +4686,7 @@ def admin_history(request):
     return render(request, "core/admin_history.html", context)
 
 
-@login_required
-@admin_required
+@sidebar_permission_required("settings:history")
 def admin_history_detail(request, pk):
     """Detailed view of a single activity log entry."""
     log = get_object_or_404(ActivityLog, pk=pk)
