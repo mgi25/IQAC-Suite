@@ -1,11 +1,11 @@
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 
 from core.models import OrganizationMembership
+from core.decorators import sidebar_permission_required
 
 from .models import JoinRequest
 
@@ -17,7 +17,7 @@ def _current_academic_year_string():
     return f"{start_year}-{end_year}"
 
 
-@staff_member_required
+@sidebar_permission_required("user_management")
 @require_http_methods(["GET", "POST"])
 def join_requests(request):
     if request.method == "POST":
