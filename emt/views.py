@@ -1070,7 +1070,11 @@ def submit_proposal(request, pk=None):
         "outcomes": outcomes,
         "flow": flow,
         "sdg_goals_list": json.dumps(
-            list(SDGGoal.objects.filter(name__in=SDG_GOALS).values("id", "name"))
+            list(
+                SDGGoal.objects.filter(name__in=SDG_GOALS)
+                .order_by("id")
+                .values("id", "name")
+            )
         ),
         "activities_json": json.dumps(activities),
         "speakers_json": json.dumps(speakers),
@@ -3411,7 +3415,8 @@ def submit_event_report(request, proposal_id):
 
     # Prepare SDG goal data for modal and proposal prefill
     sdg_goals_list = [
-        {"id": goal.id, "title": goal.name} for goal in SDGGoal.objects.all()
+        {"id": goal.id, "title": goal.name}
+        for goal in SDGGoal.objects.order_by("id")
     ]
     proposal_sdg_goals = ", ".join(
         f"SDG{goal.id}: {goal.name}" for goal in proposal.sdg_goals.all()
