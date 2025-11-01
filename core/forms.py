@@ -133,6 +133,7 @@ class OrgUsersCSVUploadForm(forms.Form):
     academic_year = forms.CharField(
         max_length=9,
         label="Academic Year (e.g., 2025-2026)",
+        required=False,
         widget=forms.TextInput(attrs={"placeholder": "2025-2026"}),
     )
     csv_file = forms.FileField(label="CSV File")

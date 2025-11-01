@@ -28,7 +28,6 @@ function initializeUserManagement() {
 
     // Setup academic year dropdowns
     setupAcademicYearSelectors('students');
-    setupAcademicYearSelectors('faculty');
 
     // Initialize upload forms
     initializeUploadForms();
