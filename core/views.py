@@ -9,7 +9,7 @@ from django.http import HttpResponseForbidden, JsonResponse, HttpResponseRedirec
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.db.models import Q, Sum, Count
+from django.db.models import Q, Sum, Count, Exists, OuterRef
 from django.forms import inlineformset_factory
 from django import forms
 from django.urls import reverse
@@ -3659,10 +3659,28 @@ def master_data_dashboard(request):
 def admin_approval_flow(request):
     """List all organizations grouped by type for approval flow management."""
     org_types = OrganizationType.objects.filter(is_active=True).order_by("name")
-    orgs_by_type = {
-        ot.name: Organization.objects.filter(org_type=ot, is_active=True).order_by("name")
-        for ot in org_types
-    }
+    active_steps = ApprovalFlowTemplate.objects.filter(
+        organization=OuterRef("pk"),
+        status=ApprovalFlowTemplate.Status.ACTIVE,
+    )
+
+    orgs_by_type = {}
+    for org_type in org_types:
+        org_queryset = (
+            Organization.objects.filter(org_type=org_type, is_active=True)
+            .annotate(
+                approval_step_count=Count(
+                    "approval_flow_templates",
+                    filter=Q(
+                        approval_flow_templates__status=ApprovalFlowTemplate.Status.ACTIVE
+                    ),
+                    distinct=True,
+                ),
+                has_approval_flow=Exists(active_steps),
+            )
+            .order_by("name")
+        )
+        orgs_by_type[org_type.name] = org_queryset
     context = {
         "org_types": org_types,
         "orgs_by_type": orgs_by_type,

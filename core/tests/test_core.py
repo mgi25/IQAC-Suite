@@ -96,6 +96,35 @@ class ApprovalFlowViewTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(ApprovalFlowTemplate.objects.count(), 0)
 
+    def test_admin_approval_flow_list_includes_status_annotations(self):
+        ot = OrganizationType.objects.create(name="Dept")
+        org_with_flow = Organization.objects.create(name="Math", org_type=ot)
+        org_without_flow = Organization.objects.create(name="Physics", org_type=ot)
+
+        ApprovalFlowTemplate.objects.create(
+            organization=org_with_flow,
+            step_order=1,
+            role_required="faculty",
+        )
+        archived = ApprovalFlowTemplate.objects.create(
+            organization=org_with_flow,
+            step_order=2,
+            role_required="hod",
+        )
+        archived.archive()
+
+        admin = User.objects.create_superuser("admin", "a@x.com", "pass")
+        self.client.force_login(admin)
+
+        resp = self.client.get("/core-admin/approval-flow/")
+        self.assertEqual(resp.status_code, 200)
+
+        orgs = {o.name: o for o in resp.context["orgs_by_type"][ot.name]}
+        self.assertTrue(orgs["Math"].has_approval_flow)
+        self.assertEqual(orgs["Math"].approval_step_count, 1)
+        self.assertFalse(orgs["Physics"].has_approval_flow)
+        self.assertEqual(orgs["Physics"].approval_step_count, 0)
+
     def test_save_approval_flow_forbidden_for_non_superuser(self):
         ot = OrganizationType.objects.create(name="Dept")
         org = Organization.objects.create(name="Math", org_type=ot)
