@@ -1894,9 +1894,10 @@ def admin_dashboard(request):
     from django.db.models import Q
     from datetime import timedelta
     import json
-    from emt.models import EventReport # Make sure this is imported
+    from django.urls import reverse
+    from emt.models import EventReport
 
-    # --- Role statistics logic (this part is correct) ---
+    # --- Role statistics logic ---
     all_assignments = RoleAssignment.objects.select_related('role', 'user').filter(
         user__is_active=True,
         user__last_login__isnull=False,
@@ -1912,19 +1913,11 @@ def admin_dashboard(request):
         elif 'hod' in role_name or 'head' in role_name:
             counted_users['hod'].add(user_id)
     
-    # === CORRECTED LOGIC FOR EVENT REPORT STATS ===
+    # === Event Report Stats ===
     total_event_reports = EventReport.objects.count()
-    
-    # We assume a report is 'pending' if 'iqac_feedback' is empty.
     pending_event_reports = EventReport.objects.filter(Q(iqac_feedback__isnull=True) | Q(iqac_feedback='')).count()
-    
-    # We assume a report is 'reviewed' if 'iqac_feedback' is NOT empty.
     reviewed_event_reports = EventReport.objects.filter(iqac_feedback__isnull=False).exclude(iqac_feedback='').count()
-    
-    # NOTE: There is no obvious field for 'rejected'. I've set this to 0.
-    # You will need to adjust this logic if you have a specific way to track rejections.
     rejected_event_reports = 0 
-    # ===============================================
 
     stats = {
         'students': len(counted_users['student']),
@@ -1955,7 +1948,7 @@ def admin_dashboard(request):
         'last_backup': timezone.now().strftime("%b %d, %Y"),
     }
     
-    # --- Recent activities logic (this part is correct) ---
+    # --- Recent activities logic ---
     recent_activities = []
     recent_proposals = EventProposal.objects.select_related('submitted_by').order_by('-created_at')[:5]
     for proposal in recent_proposals:
@@ -1980,18 +1973,32 @@ def admin_dashboard(request):
     recent_activities.sort(key=lambda x: x['timestamp'], reverse=True)
     recent_activities = recent_activities[:8]
     
-    # --- Calendar events logic (this part is correct) ---
+    # --- Calendar events logic with view_url ---
     calendar_event_proposals = EventProposal.objects.filter(
         status__in=['approved', 'finalized'],
         event_start_date__isnull=False
     ).select_related('organization')
+    
     events_list = []
     for event in calendar_event_proposals:
+        # Generate the proper view URL for each event
+        try:
+            view_url = reverse('proposal_detail', kwargs={'proposal_id': event.pk})
+        except:
+            # Fallback if the URL pattern doesn't exist
+            view_url = f'/proposal/{event.pk}/detail/'
+        
         events_list.append({
+            'id': event.pk,
             'title': event.event_title or 'Untitled Event',
             'date': event.event_start_date.strftime('%Y-%m-%d'),
-            'description': f"Organized by {event.organization.name if event.organization else 'N/A'}"
+            'description': f"Organized by {event.organization.name if event.organization else 'N/A'}",
+            'status': event.status,
+            'organization': event.organization.name if event.organization else 'N/A',
+            'type': 'proposal',
+            'view_url': view_url  # This is the key addition
         })
+    
     events_json_string = json.dumps(events_list)
     
     context = {
@@ -2001,7 +2008,6 @@ def admin_dashboard(request):
     }
     
     return render(request, 'core/admin_dashboard.html', context)
-
 @user_passes_test(lambda u: u.is_superuser)
 def admin_user_panel(request):
     return render(request, "core/admin_user_panel.html")
