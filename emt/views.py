@@ -939,46 +939,11 @@ def submit_proposal(request, pk=None):
     active_year = get_active_academic_year()
     selected_academic_year = active_year.year if active_year else ""
 
-    proposal = None
-    if pk is None:
-        pristine_draft = (
-            EventProposal.objects.filter(
-                submitted_by=request.user,
-                status=EventProposal.Status.DRAFT,
-                is_user_deleted=False,
-            )
-            .filter(
-                Q(event_title="Untitled Event")
-                | Q(event_title="")
-                | Q(event_title__isnull=True)
-            )
-            .order_by("-created_at")
-            .first()
-        )
-        if pristine_draft:
-            proposal = pristine_draft
-            pk = pristine_draft.pk
-        else:
-            active_drafts = EventProposal.objects.filter(
-                submitted_by=request.user,
-                status=EventProposal.Status.DRAFT,
-                is_user_deleted=False,
-            ).count()
-            if active_drafts >= MAX_ACTIVE_DRAFTS:
-                messages.error(
-                    request,
-                    f"You can keep up to {MAX_ACTIVE_DRAFTS} drafts. Delete an older draft before creating a new one.",
-                )
-                return redirect("emt:proposal_drafts")
-
-            academic_year = selected_academic_year
-            proposal = EventProposal.objects.create(
-                submitted_by=request.user,
-                status=EventProposal.Status.DRAFT,
-                academic_year=academic_year,
-                event_title="Untitled Event",
-            )
-            pk = proposal.pk
+    if not pk:
+        # Mirror the behaviour of visiting the "start proposal" route so tests
+        # and direct POSTs create a draft without requiring an explicit follow
+        # of the redirect.
+        return start_proposal(request)
 
     proposal = get_object_or_404(
         EventProposal.objects.prefetch_related(

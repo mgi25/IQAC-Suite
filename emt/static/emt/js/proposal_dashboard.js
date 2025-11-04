@@ -321,10 +321,8 @@ $(document).ready(function() {
             const orgTypeTS = orgTypeInput ? orgTypeInput.tomselect : null;
             const orgTypeSelect = $('#django-basic-info [name="organization_type"]');
             const preservedOrgType = orgTypeTS ? orgTypeTS.getValue() : orgTypeSelect.val();
-            const preservedOption = orgTypeTS?.options[preservedOrgType];
-            const orgTypeTextRaw = preservedOption?.text ||
-                orgTypeSelect.find(`option[value="${preservedOrgType}"]`).text();
-            const orgTypeText = orgTypeTextRaw ? orgTypeTextRaw.toString().trim() : '';
+            const orgTypeText = orgTypeTS?.options[preservedOrgType]?.text?.toLowerCase().trim() ||
+                orgTypeSelect.find(`option[value="${preservedOrgType}"]`).text().toLowerCase().trim();
             const preservedOrg = $('#django-basic-info [name="organization"]').val();
             const preservedAcademicYear = $('#academic-year-modern').val();
 
@@ -648,7 +646,7 @@ $(document).ready(function() {
                     dropdownParent: 'body',
                     maxItems: 1,
                     onChange: function(value) {
-                        const selectedText = this.options[value]?.text ? this.options[value].text.toString().trim() : '';
+                        const selectedText = this.options[value]?.text.toLowerCase().trim() || '';
                         orgTypeSelect.val(value).trigger('change');
                         // Add a small delay to ensure DOM is ready
                         setTimeout(() => {
@@ -660,7 +658,7 @@ $(document).ready(function() {
                     // Set the initial org type without triggering the change handler
                     // so the pre-selected organization value is preserved.
                     orgTypeTS.setValue(orgTypeSelect.val(), true);
-                    const initialText = orgTypeOptions.find(opt => opt.value === orgTypeSelect.val())?.text?.toString().trim() || '';
+                    const initialText = orgTypeOptions.find(opt => opt.value === orgTypeSelect.val())?.text?.toLowerCase().trim() || '';
                     if (initialText) {
                         setTimeout(() => {
                             handleOrgTypeChange(initialText, true);
@@ -2201,34 +2199,24 @@ $(document).ready(function() {
         };
     }
 
-    function handleOrgTypeChange(orgTypeLabel, preserveOrg = false) {
-        const rawLabel = typeof orgTypeLabel === 'string'
-            ? orgTypeLabel
-            : (orgTypeLabel && typeof orgTypeLabel === 'object' && 'label' in orgTypeLabel
-                ? orgTypeLabel.label
-                : '');
-        const trimmedLabel = rawLabel ? rawLabel.toString().trim() : '';
-        const normalizedOrgType = trimmedLabel
-            ? trimmedLabel.toLowerCase().replace(/[^a-z0-9]+/g, '').trim()
-            : '';
+    function handleOrgTypeChange(orgType, preserveOrg = false) {
+        let normalizedOrgType = orgType ? orgType.toString().toLowerCase().replace(/[^a-z0-9]+/g, '').trim() : '';
 
         // Remove any existing org-specific fields
         $('.org-specific-field').remove();
-
+        
         if (normalizedOrgType) {
-            createOrgField(normalizedOrgType, trimmedLabel, preserveOrg);
+            createOrgField(normalizedOrgType, preserveOrg);
         }
         if (!preserveOrg) {
             $('#django-basic-info [name="organization"]').val('').trigger('change');
         }
     }
 
-    function createOrgField(orgTypeSlug, displayLabel, preserveOrg) {
+    function createOrgField(orgType, preserveOrg) {
         const orgTypeMap = { department: 'Department', club: 'Club', association: 'Association', center: 'Center', cell: 'Cell' };
-        const normalizedSlug = orgTypeSlug || '';
-        const canonicalKey = Object.keys(orgTypeMap).find(key => normalizedSlug.includes(key));
-        const fallbackLabel = displayLabel ? displayLabel.trim() : '';
-        const label = canonicalKey ? orgTypeMap[canonicalKey] : (fallbackLabel || capitalizeFirst(normalizedSlug));
+        let canonicalType = Object.keys(orgTypeMap).find(key => orgType.includes(key)) || orgType;
+        const label = orgTypeMap[canonicalType] || capitalizeFirst(canonicalType);
         const orgFieldHtml = `
             <div class="org-specific-field form-row full-width">
                 <div class="input-group">
@@ -2244,46 +2232,11 @@ $(document).ready(function() {
         setTimeout(() => {
             $('.org-specific-field').addClass('show');
         }, 50);
-
+        
         const newSelect = $('#org-modern-select');
         const hiddenField = $('#django-basic-info [name="organization"]');
-
+        
         if (newSelect.length && typeof TomSelect !== 'undefined') {
-            const normaliseOptions = (items) => {
-                if (!Array.isArray(items)) return [];
-                return items
-                    .map((item) => {
-                        const optionId = typeof item?.id !== 'undefined' ? String(item.id) : null;
-                        const optionText = item?.text || item?.name || '';
-                        const trimmedText = optionText ? optionText.toString().trim() : '';
-                        if (!optionId || !trimmedText) {
-                            return null;
-                        }
-                        return { id: optionId, text: trimmedText };
-                    })
-                    .filter(Boolean);
-            };
-
-            const fetchOptions = (searchTerm = '') => {
-                if (!window.API_ORGANIZATIONS) {
-                    return Promise.resolve([]);
-                }
-                const params = new URLSearchParams();
-                const trimmedSearch = searchTerm ? searchTerm.toString().trim() : '';
-                if (trimmedSearch) {
-                    params.append('q', trimmedSearch);
-                }
-                if (label) {
-                    params.append('org_type', label);
-                }
-                const queryString = params.toString();
-                const url = queryString ? `${window.API_ORGANIZATIONS}?${queryString}` : window.API_ORGANIZATIONS;
-                return fetch(url, { credentials: 'same-origin' })
-                    .then((response) => (response.ok ? response.json() : []))
-                    .then(normaliseOptions)
-                    .catch(() => []);
-            };
-
             const tom = new TomSelect(newSelect[0], {
                 valueField: 'id',
                 labelField: 'text',
@@ -2293,8 +2246,10 @@ $(document).ready(function() {
                 dropdownParent: 'body',
                 placeholder: `Type ${label} name...`,
                 load: (query, callback) => {
-                    fetchOptions(query)
-                        .then((results) => callback(results))
+                    if (!query || query.length < 2) return callback();
+                    fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}&org_type=${encodeURIComponent(label)}`, { credentials: 'same-origin' })
+                        .then(r => r.json())
+                        .then(callback)
                         .catch(() => callback());
                 },
                 onChange: (value) => {
@@ -2302,32 +2257,7 @@ $(document).ready(function() {
                     clearFieldError(newSelect);
                 }
             });
-
-            let initialOptionsLoaded = false;
-            const ensureInitialOptions = () => {
-                if (initialOptionsLoaded) {
-                    return;
-                }
-                initialOptionsLoaded = true;
-                fetchOptions()
-                    .then((options) => {
-                        options.forEach((opt) => {
-                            if (!tom.options[opt.id]) {
-                                tom.addOption(opt);
-                            } else {
-                                tom.updateOption(opt.id, opt);
-                            }
-                        });
-                        tom.refreshOptions(false);
-                    })
-                    .catch(() => {
-                        initialOptionsLoaded = false;
-                    });
-            };
-
-            ensureInitialOptions();
-            tom.on('dropdown_open', ensureInitialOptions);
-
+            
             if (preserveOrg && hiddenField.val()) {
                 // Try to find existing option text
                 const existingOption = hiddenField.find(`option[value="${hiddenField.val()}"]`);
