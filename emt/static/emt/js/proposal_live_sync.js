@@ -5,15 +5,63 @@
         return;
     }
 
+    window.ProposalRealtime = window.ProposalRealtime || {};
+
     const POLL_INTERVAL = 4000;
     let lastTimestamp = window.PROPOSAL_LAST_UPDATED || null;
     let isPolling = false;
     let timerId = null;
 
     const ACTIVE_TAGS = new Set(["INPUT", "TEXTAREA"]);
+    const pendingFieldUpdates = new Map();
+
+    function clearDirtyMarker(el) {
+        if (!el) return;
+        if (el.dataset) {
+            delete el.dataset.localDirtyUntil;
+        }
+        el.removeAttribute('data-local-dirty-until');
+    }
+
+    function isLocallyDirty(el) {
+        if (!el) return false;
+        let raw = '';
+        if (el.dataset && el.dataset.localDirtyUntil) {
+            raw = el.dataset.localDirtyUntil;
+        } else if (el.hasAttribute && el.hasAttribute('data-local-dirty-until')) {
+            raw = el.getAttribute('data-local-dirty-until') || '';
+        }
+        if (!raw) {
+            return false;
+        }
+        const until = parseInt(raw, 10);
+        if (Number.isNaN(until)) {
+            clearDirtyMarker(el);
+            return false;
+        }
+        if (Date.now() <= until) {
+            return true;
+        }
+        clearDirtyMarker(el);
+        return false;
+    }
 
     function modernSelector(name) {
         return `#${name.replace(/_/g, '-')}-modern`;
+    }
+
+    function collectFieldElements(name) {
+        const elements = [];
+        const modern = document.querySelector(modernSelector(name));
+        if (modern) {
+            elements.push(modern);
+        }
+        document.querySelectorAll(`#proposal-form [name="${name}"]`).forEach(el => {
+            if (!elements.includes(el)) {
+                elements.push(el);
+            }
+        });
+        return elements;
     }
 
     function arraysEqual(a, b) {
@@ -99,18 +147,35 @@
         return true;
     }
 
+    function handleFieldUpdate(name, value, applyFn) {
+        const elements = collectFieldElements(name);
+        if (!elements.length) {
+            pendingFieldUpdates.delete(name);
+            applyFn(value);
+            return;
+        }
+        if (elements.some(isLocallyDirty)) {
+            pendingFieldUpdates.set(name, { value, applyFn });
+            return;
+        }
+        pendingFieldUpdates.delete(name);
+        applyFn(value);
+    }
+
     function updateField(name, value) {
+        handleFieldUpdate(name, value, (resolvedValue) => {
         const modern = document.querySelector(modernSelector(name));
         if (modern) {
-            setElementValue(modern, value);
+            setElementValue(modern, resolvedValue);
         }
         const hiddenSelector = `#django-forms [name="${name}"]`;
         document.querySelectorAll(hiddenSelector).forEach(field => {
-            setElementValue(field, value, { skipActiveCheck: true });
+            setElementValue(field, resolvedValue, { skipActiveCheck: true });
         });
         const basicSelector = `#django-basic-info [name="${name}"]`;
         document.querySelectorAll(basicSelector).forEach(field => {
-            setElementValue(field, value, { skipActiveCheck: true });
+            setElementValue(field, resolvedValue, { skipActiveCheck: true });
+        });
         });
     }
 
@@ -154,18 +219,20 @@
     }
 
     function updateTextSection(name, value) {
-        const normalized = value === null || value === undefined ? '' : String(value);
-        const modern = document.querySelector(modernSelector(name));
-        if (modern) {
-            setElementValue(modern, normalized);
-        }
-        updateRichField(name, normalized);
-        if (name === 'flow') {
-            const flowTextarea = document.querySelector('textarea[name="flow"]');
-            if (flowTextarea) {
-                setElementValue(flowTextarea, normalized, { skipActiveCheck: true });
+        handleFieldUpdate(name, value, (resolvedValue) => {
+            const normalized = resolvedValue === null || resolvedValue === undefined ? '' : String(resolvedValue);
+            const modern = document.querySelector(modernSelector(name));
+            if (modern) {
+                setElementValue(modern, normalized);
             }
-        }
+            updateRichField(name, normalized);
+            if (name === 'flow') {
+                const flowTextarea = document.querySelector('textarea[name="flow"]');
+                if (flowTextarea) {
+                    setElementValue(flowTextarea, normalized, { skipActiveCheck: true });
+                }
+            }
+        });
     }
 
     function applyPayload(payload) {
@@ -216,6 +283,19 @@
                 window.ProposalRealtime.updateFacultyIncharges(payload.faculty_incharges);
             }
         }
+
+        flushPendingFieldUpdates();
+    }
+
+    function flushPendingFieldUpdates() {
+        Array.from(pendingFieldUpdates.entries()).forEach(([name, payload]) => {
+            const elements = collectFieldElements(name);
+            if (elements.length && elements.some(isLocallyDirty)) {
+                return;
+            }
+            pendingFieldUpdates.delete(name);
+            payload.applyFn(payload.value);
+        });
     }
 
     async function poll() {
@@ -250,6 +330,7 @@
         } catch (err) {
             console.warn('Proposal live sync failed:', err);
         } finally {
+            flushPendingFieldUpdates();
             isPolling = false;
         }
     }
@@ -277,10 +358,13 @@
     });
 
     document.addEventListener('autosave:success', () => {
+        flushPendingFieldUpdates();
         if (!timerId) {
             startPolling();
         }
     });
 
     startPolling();
+
+    window.ProposalRealtime.flushPendingFieldUpdates = flushPendingFieldUpdates;
 })(window, document);
