@@ -114,9 +114,101 @@
         });
     }
 
+    function editorHasFocus(field, fieldId) {
+        if (window.CKEDITOR && CKEDITOR.instances[fieldId]) {
+            const instance = CKEDITOR.instances[fieldId];
+            if (instance.focusManager) {
+                const focusState = instance.focusManager.hasFocus;
+                if (typeof focusState === 'boolean') {
+                    return focusState;
+                }
+                if (typeof focusState === 'number') {
+                    return focusState > 0;
+                }
+                if (typeof focusState === 'function') {
+                    try {
+                        return Boolean(focusState.call(instance.focusManager));
+                    } catch (err) {
+                        /* ignore */
+                    }
+                }
+            }
+            if (instance.editable && instance.editable()) {
+                const active = document.activeElement;
+                const editable = instance.editable().$;
+                if (editable && active && editable.contains(active)) {
+                    return true;
+                }
+            }
+        }
+        if (window.ClassicEditor && window._editors && window._editors[field]) {
+            const editor = window._editors[field];
+            if (editor.focusTracker) {
+                if (typeof editor.focusTracker.isFocused === 'boolean') {
+                    return editor.focusTracker.isFocused;
+                }
+                if (typeof editor.focusTracker.isFocused === 'function') {
+                    try {
+                        return Boolean(editor.focusTracker.isFocused());
+                    } catch (err) {
+                        /* ignore */
+                    }
+                }
+            }
+            if (editor.editing && editor.editing.view && editor.editing.view.document) {
+                if (typeof editor.editing.view.document.isFocused === 'boolean') {
+                    return editor.editing.view.document.isFocused;
+                }
+                if (typeof editor.editing.view.document.isFocused === 'function') {
+                    try {
+                        return Boolean(editor.editing.view.document.isFocused());
+                    } catch (err) {
+                        /* ignore */
+                    }
+                }
+            }
+            const source = editor.sourceElement || (editor.editing && editor.editing.view && editor.editing.view.getDomRoot && editor.editing.view.getDomRoot());
+            if (source && source.contains && source.contains(document.activeElement)) {
+                return true;
+            }
+        }
+        if (window.tinymce && tinymce.get(fieldId)) {
+            const editor = tinymce.get(fieldId);
+            if (typeof editor.hasFocus === 'function') {
+                try {
+                    return Boolean(editor.hasFocus());
+                } catch (err) {
+                    /* ignore */
+                }
+            }
+        }
+        if (window.Quill && window._quills && window._quills[field]) {
+            const quill = window._quills[field];
+            if (typeof quill.hasFocus === 'function') {
+                try {
+                    return Boolean(quill.hasFocus());
+                } catch (err) {
+                    /* ignore */
+                }
+            }
+        }
+        const el = document.getElementById(fieldId);
+        if (el && el.contains) {
+            const active = document.activeElement;
+            if (active && (el === active || el.contains(active))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     function updateRichField(field, text) {
         const normalized = text === null || text === undefined ? '' : String(text);
         const fieldId = `id_${field}`;
+
+        if (editorHasFocus(field, fieldId)) {
+            return;
+        }
 
         if (window.CKEDITOR && CKEDITOR.instances[fieldId]) {
             if (CKEDITOR.instances[fieldId].getData() !== normalized) {
