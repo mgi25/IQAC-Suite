@@ -321,8 +321,9 @@ $(document).ready(function() {
             const orgTypeTS = orgTypeInput ? orgTypeInput.tomselect : null;
             const orgTypeSelect = $('#django-basic-info [name="organization_type"]');
             const preservedOrgType = orgTypeTS ? orgTypeTS.getValue() : orgTypeSelect.val();
-            const orgTypeText = orgTypeTS?.options[preservedOrgType]?.text?.toLowerCase().trim() ||
-                orgTypeSelect.find(`option[value="${preservedOrgType}"]`).text().toLowerCase().trim();
+            const rawOrgTypeText = orgTypeTS?.options[preservedOrgType]?.text?.trim() ||
+                orgTypeSelect.find(`option[value="${preservedOrgType}"]`).text().trim();
+            const orgTypeText = rawOrgTypeText ? rawOrgTypeText.toLowerCase().trim() : '';
             const preservedOrg = $('#django-basic-info [name="organization"]').val();
             const preservedAcademicYear = $('#academic-year-modern').val();
 
@@ -339,7 +340,7 @@ $(document).ready(function() {
             if (orgTypeTS && preservedOrgType) {
                 orgTypeTS.setValue(preservedOrgType, true);
                 if (orgTypeText) {
-                    handleOrgTypeChange(orgTypeText, true);
+                    handleOrgTypeChange(orgTypeText, rawOrgTypeText, true);
                 }
             }
 
@@ -646,11 +647,13 @@ $(document).ready(function() {
                     dropdownParent: 'body',
                     maxItems: 1,
                     onChange: function(value) {
-                        const selectedText = this.options[value]?.text.toLowerCase().trim() || '';
+                        const selectedOption = this.options[value];
+                        const rawText = selectedOption?.text?.trim() || '';
+                        const selectedText = rawText.toLowerCase();
                         orgTypeSelect.val(value).trigger('change');
                         // Add a small delay to ensure DOM is ready
                         setTimeout(() => {
-                            handleOrgTypeChange(selectedText, false);
+                            handleOrgTypeChange(selectedText, rawText, false);
                         }, 50);
                     }
                 });
@@ -658,10 +661,12 @@ $(document).ready(function() {
                     // Set the initial org type without triggering the change handler
                     // so the pre-selected organization value is preserved.
                     orgTypeTS.setValue(orgTypeSelect.val(), true);
-                    const initialText = orgTypeOptions.find(opt => opt.value === orgTypeSelect.val())?.text?.toLowerCase().trim() || '';
+                    const initialOption = orgTypeOptions.find(opt => opt.value === orgTypeSelect.val());
+                    const initialRawText = initialOption?.text?.trim() || '';
+                    const initialText = initialRawText.toLowerCase();
                     if (initialText) {
                         setTimeout(() => {
-                            handleOrgTypeChange(initialText, true);
+                            handleOrgTypeChange(initialText, initialRawText, true);
                         }, 100);
                     }
                 }
@@ -2199,24 +2204,51 @@ $(document).ready(function() {
         };
     }
 
-    function handleOrgTypeChange(orgType, preserveOrg = false) {
+    function handleOrgTypeChange(orgType, displayLabel = '', preserveOrg = false) {
         let normalizedOrgType = orgType ? orgType.toString().toLowerCase().replace(/[^a-z0-9]+/g, '').trim() : '';
 
         // Remove any existing org-specific fields
         $('.org-specific-field').remove();
-        
+
         if (normalizedOrgType) {
-            createOrgField(normalizedOrgType, preserveOrg);
+            createOrgField(normalizedOrgType, displayLabel, preserveOrg);
         }
         if (!preserveOrg) {
             $('#django-basic-info [name="organization"]').val('').trigger('change');
         }
     }
 
-    function createOrgField(orgType, preserveOrg) {
+    function deriveOrgLabel(displayLabel, fallbackKey) {
+        const labelText = (displayLabel || '').trim();
+        const normalized = labelText.toLowerCase();
+        const mapping = [
+            { keywords: ['department', 'departments', 'school', 'schools'], label: 'Department' },
+            { keywords: ['club', 'clubs'], label: 'Club' },
+            { keywords: ['association', 'associations'], label: 'Association' },
+            { keywords: ['centre', 'centres'], label: 'Centre' },
+            { keywords: ['center', 'centers'], label: 'Center' },
+            { keywords: ['cell', 'cells'], label: 'Cell' },
+        ];
+
+        for (const entry of mapping) {
+            if (entry.keywords.some(keyword => normalized.includes(keyword))) {
+                return entry.label;
+            }
+        }
+
+        if (labelText) {
+            return labelText;
+        }
+
+        return capitalizeFirst(fallbackKey || '');
+    }
+
+    function createOrgField(orgType, displayLabel, preserveOrg) {
         const orgTypeMap = { department: 'Department', club: 'Club', association: 'Association', center: 'Center', cell: 'Cell' };
         let canonicalType = Object.keys(orgTypeMap).find(key => orgType.includes(key)) || orgType;
-        const label = orgTypeMap[canonicalType] || capitalizeFirst(canonicalType);
+        const rawLabel = displayLabel && displayLabel.trim();
+        const label = deriveOrgLabel(rawLabel, canonicalType);
+        const fetchOrgType = rawLabel || label;
         const orgFieldHtml = `
             <div class="org-specific-field form-row full-width">
                 <div class="input-group">
@@ -2247,7 +2279,8 @@ $(document).ready(function() {
                 placeholder: `Type ${label} name...`,
                 load: (query, callback) => {
                     if (!query || query.length < 2) return callback();
-                    fetch(`${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}&org_type=${encodeURIComponent(label)}`, { credentials: 'same-origin' })
+                    const url = `${window.API_ORGANIZATIONS}?q=${encodeURIComponent(query)}&org_type=${encodeURIComponent(fetchOrgType)}`;
+                    fetch(url, { credentials: 'same-origin' })
                         .then(r => r.json())
                         .then(callback)
                         .catch(() => callback());
@@ -2274,6 +2307,7 @@ $(document).ready(function() {
     }
     
     function capitalizeFirst(str) {
+        if (!str) return '';
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
