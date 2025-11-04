@@ -34,7 +34,7 @@ class EventProposalForm(forms.ModelForm):
     organization_type = forms.ModelChoiceField(
         required=True,
         label="Type of Organization",
-        queryset=OrganizationType.objects.all(),
+        queryset=OrganizationType.objects.filter(is_active=True).order_by("name"),
         widget=forms.Select(attrs={"class": "tomselect-orgtype"}),
     )
     organization = forms.ModelChoiceField(
