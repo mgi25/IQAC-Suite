@@ -9,6 +9,8 @@ window.AutosaveManager = (function() {
     let saveSeq = 0;
     let lastHandledSeq = 0;
     let isRestoringDynamic = false;
+    let lastSentSignature = null;
+    let pendingSignature = null;
 
     // Always read the freshest CSRF value to avoid mismatches when the token
     // rotates after a login or in another tab. Prefer cookie, then <meta>,
@@ -85,6 +87,39 @@ window.AutosaveManager = (function() {
                 localStorage.setItem(pageKey, legacyData);
             }
             localStorage.removeItem(legacyPageKey);
+        }
+    }
+
+    function normalizeForSignature(value) {
+        if (Array.isArray(value)) {
+            return value.map(normalizeForSignature);
+        }
+        if (value && typeof value === 'object') {
+            const sorted = {};
+            Object.keys(value).sort().forEach(key => {
+                sorted[key] = normalizeForSignature(value[key]);
+            });
+            return sorted;
+        }
+        if (value === undefined) {
+            return null;
+        }
+        return value;
+    }
+
+    function computeSignature(payload) {
+        if (!payload || typeof payload !== 'object') {
+            return null;
+        }
+        const normalized = {};
+        Object.keys(payload).sort().forEach(key => {
+            normalized[key] = normalizeForSignature(payload[key]);
+        });
+        try {
+            return JSON.stringify(normalized);
+        } catch (err) {
+            console.warn('Failed to compute autosave signature', err);
+            return null;
         }
     }
 
@@ -197,8 +232,19 @@ window.AutosaveManager = (function() {
 
         const formEl = document.querySelector('form');
         const hasFile = formEl && Array.from(formEl.querySelectorAll('input[type="file"]')).some(f => f.files.length > 0);
+        const signature = hasFile ? null : computeSignature(formData);
 
-    document.dispatchEvent(new Event('autosave:start'));
+        if (!hasFile && signature && (signature === lastSentSignature || signature === pendingSignature)) {
+            return Promise.resolve({ skipped: true });
+        }
+
+        if (signature) {
+            pendingSignature = signature;
+        } else {
+            pendingSignature = null;
+        }
+
+        document.dispatchEvent(new Event('autosave:start'));
 
         const headers = { 'X-CSRFToken': getCSRFToken() };
         const options = {
@@ -241,6 +287,15 @@ window.AutosaveManager = (function() {
             return data;
         })
         .then(data => {
+            if (signature) {
+                lastSentSignature = signature;
+                pendingSignature = null;
+            } else {
+                pendingSignature = null;
+                if (!hasFile) {
+                    lastSentSignature = null;
+                }
+            }
             if (data && data.proposal_id) {
                 // Only update UI/events if this response is not stale
                 if (seq >= lastHandledSeq) {
@@ -257,10 +312,16 @@ window.AutosaveManager = (function() {
             return Promise.reject(data);
         })
         .catch(err => {
+            if (signature && pendingSignature === signature) {
+                pendingSignature = null;
+            }
             // Only dispatch error if this response is not stale
             if (seq >= lastHandledSeq) {
                 lastHandledSeq = seq;
                 document.dispatchEvent(new CustomEvent('autosave:error', {detail: err}));
+            }
+            if (signature && lastSentSignature === signature) {
+                lastSentSignature = null;
             }
             return Promise.reject(err);
         });
