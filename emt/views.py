@@ -16,7 +16,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import EmailValidator, URLValidator
 from django.db.models import Q, Sum
 from django.forms import modelformset_factory
@@ -1573,11 +1573,18 @@ def proposal_live_state(request, proposal_id):
     else:
         basic_fields.update({"organization": "", "organization_type": ""})
 
+    def _get_related_content(instance, related_name):
+        try:
+            related_obj = getattr(instance, related_name)
+        except ObjectDoesNotExist:
+            return ""
+        return getattr(related_obj, "content", "") or ""
+
     text_sections = {
-        "need_analysis": getattr(proposal.need_analysis, "content", ""),
-        "objectives": getattr(proposal.objectives, "content", ""),
-        "outcomes": getattr(proposal.expected_outcomes, "content", ""),
-        "flow": getattr(proposal.tentative_flow, "content", ""),
+        "need_analysis": _get_related_content(proposal, "need_analysis"),
+        "objectives": _get_related_content(proposal, "objectives"),
+        "outcomes": _get_related_content(proposal, "expected_outcomes"),
+        "flow": _get_related_content(proposal, "tentative_flow"),
     }
 
     activities = [
