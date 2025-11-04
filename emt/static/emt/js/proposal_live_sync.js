@@ -11,6 +11,72 @@
     let timerId = null;
 
     const ACTIVE_TAGS = new Set(["INPUT", "TEXTAREA"]);
+    const latestServerFields = Object.create(null);
+
+    function normalizeValue(value) {
+        if (Array.isArray(value)) {
+            return JSON.stringify(value.map(v => (v === null || v === undefined) ? "" : String(v)));
+        }
+        return value === null || value === undefined ? "" : String(value);
+    }
+
+    function clearDirtyMarker(el) {
+        if (!el) return;
+        if (el.dataset) {
+            delete el.dataset.localDirtyUntil;
+        }
+        el.removeAttribute('data-local-dirty-until');
+    }
+
+    function isLocallyDirty(el) {
+        if (!el) return false;
+        let raw = '';
+        if (el.dataset && el.dataset.localDirtyUntil) {
+            raw = el.dataset.localDirtyUntil;
+        } else if (el.hasAttribute && el.hasAttribute('data-local-dirty-until')) {
+            raw = el.getAttribute('data-local-dirty-until') || '';
+        }
+        if (!raw) {
+            return false;
+        }
+        const until = parseInt(raw, 10);
+        if (Number.isNaN(until)) {
+            clearDirtyMarker(el);
+            return false;
+        }
+        if (Date.now() <= until) {
+            return true;
+        }
+        clearDirtyMarker(el);
+        return false;
+    }
+
+    function shouldSkipFieldUpdate(name, incomingValue) {
+        const normalizedIncoming = normalizeValue(incomingValue);
+        const previous = latestServerFields[name];
+        latestServerFields[name] = normalizedIncoming;
+        const elements = [];
+        const modern = document.querySelector(modernSelector(name));
+        if (modern) {
+            elements.push(modern);
+        }
+        document.querySelectorAll(`#proposal-form [name="${name}"]`).forEach(el => {
+            if (!elements.includes(el)) {
+                elements.push(el);
+            }
+        });
+        if (!elements.length) {
+            return false;
+        }
+        const hasDirty = elements.some(isLocallyDirty);
+        if (!hasDirty) {
+            return false;
+        }
+        if (previous !== undefined && previous === normalizedIncoming) {
+            return true;
+        }
+        return false;
+    }
 
     function modernSelector(name) {
         return `#${name.replace(/_/g, '-')}-modern`;
@@ -100,6 +166,10 @@
     }
 
     function updateField(name, value) {
+        if (shouldSkipFieldUpdate(name, value)) {
+            return;
+        }
+
         const modern = document.querySelector(modernSelector(name));
         if (modern) {
             setElementValue(modern, value);
@@ -154,6 +224,10 @@
     }
 
     function updateTextSection(name, value) {
+        if (shouldSkipFieldUpdate(name, value)) {
+            return;
+        }
+
         const normalized = value === null || value === undefined ? '' : String(value);
         const modern = document.querySelector(modernSelector(name));
         if (modern) {
