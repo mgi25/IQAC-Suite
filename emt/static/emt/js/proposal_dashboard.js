@@ -18,6 +18,45 @@ $(document).ready(function() {
 
     window.ProposalRealtime = window.ProposalRealtime || {};
 
+    const DIRTY_GRACE_MS = 12000;
+
+    const markFieldDirty = (element) => {
+        if (!element) return;
+        const until = Date.now() + DIRTY_GRACE_MS;
+        try {
+            element.dataset.localDirtyUntil = String(until);
+        } catch (err) {
+            element.setAttribute('data-local-dirty-until', String(until));
+        }
+    };
+
+    const handleDirtyEvent = (event) => {
+        if (!event || !event.isTrusted) return;
+        const target = event.target;
+        if (!target || !(target instanceof HTMLElement || target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) {
+            return;
+        }
+        if (!target.closest || !target.closest('#proposal-form')) {
+            return;
+        }
+        markFieldDirty(target);
+    };
+
+    document.addEventListener('input', handleDirtyEvent, true);
+    document.addEventListener('change', handleDirtyEvent, true);
+
+    document.addEventListener('autosave:success', () => {
+        document.querySelectorAll('#proposal-form [data-local-dirty-until]').forEach((el) => {
+            if (el.dataset) {
+                delete el.dataset.localDirtyUntil;
+            }
+            el.removeAttribute('data-local-dirty-until');
+        });
+        if (window.ProposalRealtime && typeof window.ProposalRealtime.flushPendingFieldUpdates === 'function') {
+            window.ProposalRealtime.flushPendingFieldUpdates();
+        }
+    });
+
     let currentExpandedCard = null;
     let sectionProgress = {
         'basic-info': false,
