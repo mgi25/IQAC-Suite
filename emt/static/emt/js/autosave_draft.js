@@ -141,17 +141,27 @@ window.AutosaveManager = (function() {
                     const values = inputs.filter(i => i.checked).map(i => i.value);
                     if (values.length) {
                         data[name] = values;
+                    } else if (saved[name] !== undefined) {
+                        data[name] = [];
                     }
                 } else if (field.checked) {
                     data[name] = true;
+                } else if (saved[name] !== undefined) {
+                    data[name] = false;
                 }
             } else if (field.type === 'radio') {
                 const checked = inputs.find(i => i.checked);
-                if (checked) data[name] = checked.value;
+                if (checked) {
+                    data[name] = checked.value;
+                } else if (saved[name] !== undefined) {
+                    data[name] = '';
+                }
             } else if (field.multiple) {
                 const selected = Array.from(field.selectedOptions).map(o => o.value).filter(v => v !== '');
                 if (selected.length) {
                     data[name] = selected;
+                } else if (saved[name] !== undefined) {
+                    data[name] = [];
                 }
             } else {
                 // When multiple inputs share the same name (e.g. hidden Django field
@@ -163,6 +173,8 @@ window.AutosaveManager = (function() {
                 const value = preferred.value;
                 if (String(value).trim() !== '') {
                     data[name] = value;
+                } else if (saved[name] !== undefined) {
+                    data[name] = '';
                 }
             }
         });
