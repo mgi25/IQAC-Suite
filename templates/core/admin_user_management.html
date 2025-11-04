@@ -579,7 +579,7 @@
                                         const headerLine = header.map((h, i) => formatForAlign(h, widths[i], columnsForExport[i].align)).join(sep);
                                         const divider = widths.map((w) => '-'.repeat(w)).join(sep);
 
-                                        const lines = ['CHRIST University - Central Command Center', headerLine, divider];
+                                        const lines = ['User', headerLine, divider];
                                         for (const row of body) {
                                             const aligned = row.map((cell, i) => formatForAlign(cell, widths[i], columnsForExport[i].align)).join(sep);
                                             lines.push(aligned);
@@ -657,7 +657,7 @@
                             text: 'PDF',
                             orientation: 'landscape',
                             pageSize: 'A3',
-                            title: 'CHRIST University - Central Command Center',
+                            title: 'User Management',
                             exportOptions: {
                                 columns: function (idx, data, node) {
                                     return shouldIncludeColumnForExport(node);
