@@ -87,7 +87,7 @@
             <h1 class="content-title" id="main-title">Basic Information</h1>
             <p class="content-subtitle" id="main-subtitle">Organization details and event basics</p>
             <div class="content-actions">
-                <button type="button" id="autofill-btn" class="btn-draft">Auto-Fill Test Data</button>
+                <!-- <button type="button" id="autofill-btn" class="btn-draft">Auto-Fill Test Data</button> -->
                 <button type="button" id="reset-draft-btn" class="btn-draft"
                         {% if not proposal.id %}disabled{% endif %}>Reset Draft</button>
             </div>
@@ -264,7 +264,10 @@
                         <!-- Save Section -->
                         <div class="form-row full-width">
                             <div class="save-section-container" style="display: flex; flex-direction: column; align-items: center;">
-                                <button type="button" class="btn-save-section" style="margin-bottom: 0.5rem;">Save & Continue</button>
+                                <button type="button" id="save-section-btn" class="btn-save-section" style="margin-bottom: 0.5rem;">
+                                    Save & Continue
+                                </button>
+
                                 <div class="save-help-text" style="margin-top: 0.75rem;">Complete this section to unlock the next one</div>
                             </div>
                         </div>
@@ -319,9 +322,9 @@
     </main>
 </div>
 
-<div class="autosave-indicator" id="autosave-indicator">
+<!-- <div class="autosave-indicator" id="autosave-indicator">
     <span class="indicator-text">Saved</span>
-</div>
+</div> -->
 {% if proposal.organization %}
 <div id="outcomeModal" class="outcome-modal" data-url="{% url 'emt:api_outcomes' proposal.organization.id %}">
     <div class="modal-content">
@@ -401,7 +404,7 @@
         // window.AI_OBJECTIVES_URL = "{% url 'emt:generate_objectives' %}";
         // window.AI_OUTCOMES_URL = "{% url 'emt:generate_expected_outcomes' %}";
     </script>
-    <script src="{% static 'emt/js/autosave_draft.js' %}"></script>
+    <!-- <script src="{% static 'emt/js/autosave_draft.js' %}"></script> -->
     <script src="{% static 'emt/js/proposal_dashboard.js' %}"></script>
     <script src="{% static 'emt/js/proposal_live_sync.js' %}"></script>
 {% endblock %}
