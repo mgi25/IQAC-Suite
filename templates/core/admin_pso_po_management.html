@@ -32,7 +32,7 @@
               value="{{ key }}"
               data-can-have-parent="{% if org_type.can_have_parent %}true{% else %}false{% endif %}"
               data-parent-type="{% if org_type.parent_type %}{{ org_type.parent_type.name|lower }}{% endif %}">
-              {{ org_type.name }}{% if not key == 'cell' %}s{% endif %}
+              {{ org_type.name }}{% if not key == 'cell' %}{% endif %}
             </option>
             {% endwith %}
           {% endfor %}

@@ -23,7 +23,7 @@
           <a href="{% url 'emt:submit_proposal_with_pk' proposal.id %}?next={{ request.path }}" class="btn-save-section">Edit</a>
           <form method="post" style="display:inline;">
             {% csrf_token %}
-            <button type="submit" name="final_submit" class="btn-submit">Confirm Submit</button>
+            <button type="submit" name="final_submit" class="btn btn-primary btn-submit">Confirm Submit</button>
           </form>
         </div>
       </div>
