@@ -150,6 +150,8 @@ urlpatterns = [
     path("api/org-types/", views.api_org_types, name="api_org_types"),
     path("api/orgs/", views.api_orgs_by_type, name="api_orgs_by_type"),
     path("api/filter-meta/<str:category>/", views.api_filter_meta, name="api_filter_meta"),
+    path('category/<int:pk>/edit/', views.edit_category, name='edit_category'),
+    path('category/<int:pk>/delete/', views.delete_category, name='delete_category'),
     # ────────────────────────────────────────────────
     # API Endpoints
     # ────────────────────────────────────────────────
