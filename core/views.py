@@ -6424,6 +6424,30 @@ def api_export_csv(request):
         writer.writerow({k: it.get(k, '') for k in fieldnames})
     return response
 
+def edit_category(request, pk):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            category = OrganizationType.objects.get(pk=pk)
+            category.name = data.get("name", category.name)
+
+            parent_id = data.get("parent_type")
+            if parent_id:
+                category.parent_type_id = parent_id
+            else:
+                category.parent_type = None
+
+            category.save()
+            return JsonResponse({"success": True})
+        except OrganizationType.DoesNotExist:
+            return JsonResponse({"error": "Category not found"}, status=404)
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+def delete_category(request, pk):
+    category = get_object_or_404(OrganizationType, pk=pk)
+    category.delete()
+    return redirect('admin_master_data')  # ✅ Correct redirect name
+
 
 @csrf_exempt
 @sidebar_permission_required("reports")

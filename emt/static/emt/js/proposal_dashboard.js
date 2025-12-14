@@ -5515,4 +5515,3 @@ function enhanceProposalInputs() {
     }
   });
 }
-
