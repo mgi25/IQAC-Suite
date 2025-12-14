@@ -272,10 +272,12 @@ class ApprovalStep(models.Model):
     """Represents a single step in the approval workflow for a proposal."""
 
     class Status(models.TextChoices):
+        WAITING = "waiting", "Waiting"
         PENDING = "pending", "Pending"
         APPROVED = "approved", "Approved"
         REJECTED = "rejected", "Rejected"
         SKIPPED = "skipped", "Skipped"
+
 
     class Role(models.TextChoices):
         FACULTY = "faculty", "Faculty"

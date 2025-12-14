@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from operator import attrgetter
 from types import SimpleNamespace
 from urllib.parse import urlparse
-
+from django.utils.http import url_has_allowed_host_and_scheme
 import pdfkit
 import requests
 from bs4 import BeautifulSoup
@@ -989,7 +989,7 @@ def submit_proposal(request, pk=None):
 
     else:
         # Only pre-populate form with existing data if it's still a draft
-        form_instance = proposal if (proposal and proposal.status == "draft") else None
+        form_instance = proposal if (proposal and proposal.status == EventProposal.Status.DRAFT) else None
 
         form = EventProposalForm(
             instance=form_instance,
@@ -1089,10 +1089,11 @@ def submit_proposal(request, pk=None):
         is_final = "final_submit" in request.POST
         is_review = "review_submit" in request.POST
         if is_final:
-            proposal.status = "submitted"
+            proposal.status = EventProposal.Status.SUBMITTED
             proposal.submitted_at = timezone.now()
         else:
-            proposal.status = "draft"
+            proposal.status = EventProposal.Status.DRAFT
+
         proposal.save()
         form.save_m2m()
         _save_text_sections(proposal, request.POST)
@@ -1130,8 +1131,9 @@ def submit_proposal(request, pk=None):
                 f"Proposal '{proposal.event_title}' submitted.",
             )
             return redirect("emt:proposal_status_detail", proposal_id=proposal.id)
-        if next_url:
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
             return redirect(next_url)
+
         if is_review:
             return redirect("emt:review_proposal", proposal_id=proposal.id)
         return redirect("emt:submit_need_analysis", proposal_id=proposal.id)
@@ -1177,7 +1179,7 @@ def review_proposal(request, proposal_id):
     support = getattr(proposal, "cdl_support", None)
 
     if request.method == "POST" and "final_submit" in request.POST:
-        proposal.status = "submitted"
+        proposal.status = EventProposal.Status.SUBMITTED
         proposal.submitted_at = timezone.now()
         proposal.save()
         build_approval_chain(proposal)
@@ -1275,7 +1277,7 @@ def autosave_proposal(request):
         ).first()
 
         # Don't autosave if proposal is already submitted
-        if existing_proposal and existing_proposal.status != "draft":
+        if existing_proposal and existing_proposal.status != EventProposal.Status.DRAFT:
             return JsonResponse(
                 {"success": False, "error": "Cannot modify submitted proposal"}
             )
@@ -1349,7 +1351,7 @@ def autosave_proposal(request):
             continue
         setattr(proposal, field, value)
     proposal.submitted_by = request.user
-    proposal.status = "draft"
+    proposal.status = EventProposal.Status.DRAFT
     proposal.save()
 
     for field, value in form.cleaned_data.items():
@@ -1897,7 +1899,7 @@ def submit_cdl_support(request, proposal_id):
             support.other_services = form.cleaned_data.get("other_services", [])
             support.save()
 
-            proposal.status = "draft"
+            proposal.status = EventProposal.Status.DRAFT
             proposal.save()
 
             if "review_submit" in request.POST:

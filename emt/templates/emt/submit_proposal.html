@@ -395,11 +395,12 @@
         window.API_CLASSES_BASE = "{% url 'emt:api_classes' 0 %}".split('0/')[0];
         window.API_OUTCOMES_BASE = "{% url 'emt:api_outcomes' 0 %}".replace(/0\/$/, '');
         window.API_FETCH_LINKEDIN = "{% url 'emt:fetch_linkedin_profile' %}";
-        window.SDG_GOALS = {{ sdg_goals_list|safe }};
-        window.EXISTING_ACTIVITIES = {{ activities_json|safe }};
-        window.EXISTING_SPEAKERS = {{ speakers_json|safe }};
-        window.EXISTING_EXPENSES = {{ expenses_json|safe }};
-        window.EXISTING_INCOME = {{ income_json|default:'[]'|safe }};
+        window.SDG_GOALS = JSON.parse('{{ sdg_goals_list|escapejs }}');
+        window.EXISTING_ACTIVITIES = JSON.parse('{{ activities_json|escapejs }}');
+        window.EXISTING_SPEAKERS = JSON.parse('{{ speakers_json|escapejs }}');
+        window.EXISTING_EXPENSES = JSON.parse('{{ expenses_json|escapejs }}');
+        window.EXISTING_INCOME = JSON.parse('{{ income_json|default:"[]"|escapejs }}');
+
         // window.AI_NEED_URL = "{% url 'emt:generate_need_analysis' %}";
         // window.AI_OBJECTIVES_URL = "{% url 'emt:generate_objectives' %}";
         // window.AI_OUTCOMES_URL = "{% url 'emt:generate_expected_outcomes' %}";
